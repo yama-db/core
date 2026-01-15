@@ -208,7 +208,7 @@ __marimo__/
 
 # added by anineco
 .DS_Store
-private_data/*
+archive/*
 !.gitkeep
-workspace/
-tiles/
+work/
+private/
