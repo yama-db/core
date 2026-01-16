@@ -208,7 +208,11 @@ __marimo__/
 
 # added by anineco
 .DS_Store
+*.geojson
+*.zip
+*.xml
 archive/*
 !.gitkeep
+tiles/
 work/
 private/
