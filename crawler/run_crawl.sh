@@ -5,23 +5,28 @@ export HOME=/var/services/homes/tad
 cd $(dirname $0)
 PYTHON=../venv/bin/python3
 
-if [ "$MODE" == "night" ]; then
-    if [ "$SITE" == "yamap" ]; then
-        STEP=2500
-        INTERVAL=0.1
+INTERVAL=0.2
+TIMEOUT=3000
+
+# Step.1 yamareco を全件クロール
+# Step.2 yamap を全件クロール
+# 毎時00分に起動、50分で完了させる
+# night (00:00-06:00) 
+# day   (09:00-17:00)
+
+if [ "$SITE" == "yamareco" ]; then
+    if [ "$mode" == "night" ]; then
+        STEP=9000
     else
-        STEP=1000
-        INTERVAL=0.2
+        STEP=5400
     fi
 else
-    if [ "$SITE" == "yamap" ]; then
-        STEP=800
-        INTERVAL=0.1
+    if [ "$mode" == "night" ]; then
+        STEP=3800
     else
-        STEP=500
-        INTERVAL=0.4
+        STEP=3000
     fi
 fi
 
 # 実行
-$PYTHON crawler.py "$SITE" --step "$STEP" --interval "$INTERVAL"
+$PYTHON crawler.py "$SITE" --timeout "$TIMEOUT" --interval "$INTERVAL" # --step "$STEP"

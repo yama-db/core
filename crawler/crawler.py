@@ -96,18 +96,27 @@ def main():
         "site_name", choices=["yamap", "yamareco"], help="Site to crawl"
     )
     parser.add_argument("--truncate", action="store_true", help="Truncate tables")
-    parser.add_argument("--step", type=int, default=100, help="Number of POIs to crawl")
+    parser.add_argument("--step", type=int, help="Number of POIs to crawl")
+    parser.add_argument(
+        "--max-failures", type=int, default=800, help="Max consecutive failures"
+    )
     parser.add_argument(
         "--interval",
         type=float,
         default=0.5,
         help="Interval between requests (seconds)",
     )
+    parser.add_argument("--timeout", type=int, help="Request timeout (seconds)")
     args = parser.parse_args()
     site_name = args.site_name.lower()
     truncate = args.truncate
     step = args.step
+    max_failures = args.max_failures
     interval = args.interval
+    timeout = args.timeout
+    if not (step > 0 or timeout > 0):
+        print("[!] Either --step or --timeout must be greater than 0.")
+        return
 
     if site_name == "yamareco":
         pois_table = "yamareco_pois"
@@ -126,12 +135,29 @@ def main():
 
     start = db.get_max_id() + 1
     print(f"[*] Crawling {site_name} starts from ID {start}")
-    count = 0
+    count = 0  # Number of successful entries
     n_write = 0  # Number of DB writes
+    n_failures = 0  # Number of consecutive failures
+    target_id = start
+    start_time = time.time()
     try:
         with requests.Session() as session:
             session.headers.update({"User-Agent": USER_AGENT})
-            for target_id in range(start, start + step):
+            while True:
+                if step > 0 and target_id >= start + step:
+                    break
+                if n_failures >= max_failures:
+                    print(
+                        f"[!] Reached maximum consecutive failures ({n_failures}). Stopping crawler."
+                    )
+                    break
+                elapsed_time = time.time() - start_time
+                if timeout > 0 and elapsed_time >= timeout:
+                    print(
+                        f"[*] Timeout reached after {elapsed_time:.2f} seconds. Stopping crawler."
+                    )
+                    break
+                # Fetch data
                 data, status = fetch_func(session, target_id)
                 if status == CrawlerDB.STATUS_RATE_LIMIT:
                     print(
@@ -142,16 +168,20 @@ def main():
                     db.save_to_database(target_id, data)
                     count += 1
                     n_write += 1
+                    n_failures = 0
+                else:
+                    n_failures += 1
                 db.update_queue_status(target_id, status)
                 n_write += 1
                 if n_write % 100 == 0:  # CONFIG: Commit every 100 writes
                     db.commit()
+                target_id += 1
                 if interval > 0:
                     time.sleep(interval)
     finally:
         db.commit()
 
-    print(f"[*] Total successful entries: {count} / {step}")
+    print(f"[*] Total successful entries: {count} / {target_id - start}")
 
 
 if __name__ == "__main__":
