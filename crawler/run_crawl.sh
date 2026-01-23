@@ -1,15 +1,27 @@
 #!/bin/bash
-# 15分おきに実行するcron設定例
-# */15 * * * * bash /var/services/homes/tad/web/script/run_crawl.sh
-
-# 実行ディレクトリへ移動
+SITE=$1
+MODE=$2
+export HOME=/var/services/homes/tad
 cd $(dirname $0)
-#PYTHON=./venv/bin/python3
 PYTHON=../venv/bin/python3
 
-echo "--- Starting All Crawlers: $(date +'%Y-%m-%d %H:%M:%S') ---"
-echo "[*] Running YAMAP Crawler..."
-$PYTHON crawl_yamap.py
-echo "[*] Running Yamareco Crawler..."
-$PYTHON crawl_yamareco.py
-echo "--- Finished All Crawlers: $(date +'%Y-%m-%d %H:%M:%S') ---"
+if [ "$MODE" == "night" ]; then
+    if [ "$SITE" == "yamap" ]; then
+        STEP=2500
+        INTERVAL=0.1
+    else
+        STEP=1000
+        INTERVAL=0.2
+    fi
+else
+    if [ "$SITE" == "yamap" ]; then
+        STEP=800
+        INTERVAL=0.1
+    else
+        STEP=500
+        INTERVAL=0.4
+    fi
+fi
+
+# 実行
+$PYTHON crawler.py "$SITE" --step "$STEP" --interval "$INTERVAL"

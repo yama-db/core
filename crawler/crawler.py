@@ -144,7 +144,7 @@ def main():
                     n_write += 1
                 db.update_queue_status(target_id, status)
                 n_write += 1
-                if n_write > 0 and n_write % 100 == 0:
+                if n_write % 100 == 0:  # CONFIG: Commit every 100 writes
                     db.commit()
                 if interval > 0:
                     time.sleep(interval)

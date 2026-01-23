@@ -69,8 +69,8 @@
                 onEachFeature: function (feature, layer) {
                     const props = feature.properties;
                     const elevation = props.elevation ? `${props.elevation} m` : '不明';
-                    const raw_remote_id = props.raw_remote_id;
-                    layer.bindPopup(`<strong>${props.name}</strong><br>標高: ${elevation}<br>ID: ${raw_remote_id}`);
+                    const id = props.id;
+                    layer.bindPopup(`<strong>${props.name}</strong><br>標高: ${elevation}<br>ID: ${id}`);
                 }
             }).addTo(map);
         })

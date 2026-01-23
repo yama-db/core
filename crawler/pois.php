@@ -38,7 +38,7 @@ try {
 
     if ($target === 'yamareco') {
         $query = <<<EOS
-SELECT name, lat, lon, elevation_m, raw_remote_id
+SELECT raw_remote_id AS id, name, lat, lon, elevation_m
 FROM yamareco_pois
 WHERE JSON_CONTAINS(poi_type_raw, 1)
   AND lat IS NOT NULL AND lon IS NOT NULL
@@ -47,9 +47,9 @@ LIMIT 100
 EOS;
     } else {
         $query = <<<EOS
-SELECT name, lat, lon, elevation_m, raw_remote_id
+SELECT raw_remote_id AS id, name, lat, lon, elevation_m
 FROM yamap_pois
-WHERE (poi_type_raw = "19" OR poi_type_raw = "999") 
+WHERE poi_type_raw IN ("19", "999")
   AND lat IS NOT NULL AND lon IS NOT NULL
 ORDER BY raw_remote_id DESC
 LIMIT 100
@@ -69,7 +69,7 @@ EOS;
             "properties" => [
                 "name" => $row['name'],
                 "elevation" => $row['elevation_m'] !== null ? (float)$row['elevation_m'] : null,
-                "raw_remote_id" => $row['raw_remote_id']
+                "id" => $row['id']
             ]
         ];
     }
