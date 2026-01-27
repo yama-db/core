@@ -1,0 +1,7 @@
+source_id,organization_name,base_url
+1,国土地理院：基盤地図情報（基準点・標高点）,https://service.gsi.go.jp/kiban/app/
+2,国土地理院：数値地図25000（地名・公共施設）,https://www.gsi.go.jp/MAP/CD-ROM/abolition.htm#04
+3,国土地理院：ベクトルタイル提供実験（地名情報）,https://github.com/gsi-cyberjapan/experimental_pni/
+4,Wikidata,https://www.wikidata.org/
+5,YAMAP,https://yamap.com/
+6,YamaReco,https://www.yamareco.com/
