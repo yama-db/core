@@ -96,7 +96,7 @@ def main():
         "site_name", choices=["yamap", "yamareco"], help="Site to crawl"
     )
     parser.add_argument("--truncate", action="store_true", help="Truncate tables")
-    parser.add_argument("--step", type=int, help="Number of POIs to crawl")
+    parser.add_argument("--step", type=int, default=0, help="Number of POIs to crawl")
     parser.add_argument(
         "--max-failures", type=int, default=800, help="Max consecutive failures"
     )
@@ -106,7 +106,7 @@ def main():
         default=0.5,
         help="Interval between requests (seconds)",
     )
-    parser.add_argument("--timeout", type=int, help="Request timeout (seconds)")
+    parser.add_argument("--timeout", type=int, default=0, help="Request timeout (seconds)")
     args = parser.parse_args()
     site_name = args.site_name.lower()
     truncate = args.truncate
@@ -146,7 +146,7 @@ def main():
             while True:
                 if step > 0 and target_id >= start + step:
                     break
-                if n_failures >= max_failures:
+                if max_failures > 0 and n_failures >= max_failures:
                     print(
                         f"[!] Reached maximum consecutive failures ({n_failures}). Stopping crawler."
                     )
