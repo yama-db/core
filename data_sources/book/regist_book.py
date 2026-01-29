@@ -5,6 +5,7 @@
 
 import csv
 import json
+import os
 import sys
 from argparse import ArgumentParser
 from pathlib import Path
@@ -21,11 +22,15 @@ parser.add_argument(
     "-t", "--truncate", action="store_true", help="登録前にテーブルを空にする"
 )
 args = parser.parse_args()
-source_id = args.source_id
+source_id = int(args.source_id)
 csv_file = args.csv_file
 truncate = args.truncate
 
 table_name = "stg_book_pois"
+
+if os.path.isfile(csv_file) and os.path.getsize(csv_file) == 0:
+    print(f"空のファイルのため処理をスキップします: {csv_file}")
+    sys.exit(0)
 
 # MySQL接続の確立
 try:
@@ -70,31 +75,10 @@ with open(csv_file, "r", encoding="utf-8-sig") as f:
     values = []
     for row in reader:
         raw_remote_id = row["raw_remote_id"]
-        uuid = generate_source_uuid(f"NDL{ndl_id}", raw_remote_id)
-        lon = 0.0
-        lat = 0.0
-        unified_poi_id = row["unified_poi_id"]
-        if unified_poi_id:
-            cursor.execute(
-                """
-                SELECT display_lat AS lat, display_lon AS lon 
-                FROM unified_pois
-                WHERE id = %s
-                """,
-                (unified_poi_id,),
-            )
-            poi = cursor.fetchone()
-            if poi:
-                lon = float(poi["lon"])
-                lat = float(poi["lat"])
-            else:
-                print(
-                    f"Warning: No unified_pois entry found for id {unified_poi_id}",
-                    file=sys.stderr,
-                )
+        uuid = generate_source_uuid(f"NDL{ndl_id}_poi", raw_remote_id)
+        name = row["name"]
+        kana = row["kana"]
         try:
-            name = row["name"]
-            kana = row["kana"]
             names_json = json.dumps([{"name": name, "kana": kana}], ensure_ascii=False)
         except Exception as e:
             print(
@@ -108,9 +92,9 @@ with open(csv_file, "r", encoding="utf-8-sig") as f:
                 uuid.bytes,
                 raw_remote_id,
                 names_json,
-                f"POINT({lon} {lat})",
                 row["elevation_m"] or None,
                 source_id,
+                row["unified_poi_id"] or None,
             )
         )
 
@@ -119,11 +103,9 @@ try:
     cursor.executemany(
         f"""
         INSERT INTO {table_name} (
-            source_uuid, raw_remote_id, names_json,
-            geom, elevation_m, source_id
+            source_uuid, raw_remote_id, names_json, elevation_m, source_id, unified_poi_id
         ) VALUES (
-            %s, %s, %s,
-            ST_GeomFromText(%s, 4326, "axis-order=long-lat"), %s, %s
+            %s, %s, %s, %s, %s, %s
         )
         """,
         values

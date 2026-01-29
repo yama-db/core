@@ -1,14 +1,21 @@
-all: dist/gsi_gcp.csv
-
 TABLE_NAME := stg_gsi_gcp_pois
 
-dist/gsi_gcp.csv:
-	../xml2csv.py workspace/FG-GML-*.xml > $@
+all: dist/gsi_gcp.csv
 
-register: dist/gsi_gcp.csv
-	../regist_pois.py --truncate $< $(TABLE_NAME)
+dist/gsi_gcp.csv: work/.extracted
+	python3 xml2csv.py work/FG-GML-*.xml > $@
+
+work/.extracted:
+	./extract.sh
+	touch $@
+
+regist: dist/gsi_gcp.csv
+	python3 ../regist_pois.py --truncate $< $(TABLE_NAME)
+
+unify:
+	python3 unify_gcp.py $(TABLE_NAME)
 
 clean:
-	rm -f dist/*
+	rm -rf dist/* work/*
 
-.PHONY: all clean
+.PHONY: all regist unify clean

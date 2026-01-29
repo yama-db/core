@@ -19,6 +19,9 @@ csv_file = args.csv_file
 table_name = args.table_name
 truncate = args.truncate
 
+category_id = "mountain"
+display_name = "山"
+
 # MySQL接続の確立
 try:
     my_cnf = Path(sys.prefix).parent / ".my.cnf"
@@ -35,7 +38,12 @@ if truncate:
     try:
         cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
         cursor.execute(f"TRUNCATE TABLE {table_name}")
+        cursor.execute(f"TRUNCATE TABLE poi_categories")
         cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
+        cursor.execute(
+            "INSERT INTO poi_categories (id, display_name) VALUES (%s, %s)",
+            (category_id, display_name)
+        )
         conn.commit()
         print(f"Table {table_name} truncated.")
     except mysql.connector.Error as e:
@@ -52,7 +60,7 @@ try:
             lat = row["lat"]
             lon = row["lon"]
             alt = row["alt"]
-            values.append(("mountain", name, f"POINT({lon} {lat})", alt))
+            values.append((category_id, name, f"POINT({lon} {lat})", alt))
 
     cursor.executemany(
         f"""

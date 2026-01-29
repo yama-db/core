@@ -14,19 +14,19 @@ raw/AdminiBoundary_CD.xlsx:
 	@exit 1
 
 raw/query.csv:
-	./query_jis_code.py > $@
+	python3 query_jis_code.py > $@
 
 dist/regions.csv: raw/AdminiBoundary_CD.xlsx raw/query.csv
-	./gen_regions_csv.py $^ > $@
+	python3 gen_regions_csv.py $^ > $@
 
 work/N03-$(REVISION).geojson: raw/N03-$(REVISION)_GML.zip
 	unzip $< $(@F) -d $(@D)
 
 regist: dist/regions.csv work/N03-$(REVISION).geojson
-	../regist_csv.py --truncate $< $(TABLE_REGIONS)
-	./regist_boundaries.py --truncate work/N03-$(REVISION).geojson $(TABLE_BOUNDARIES)
+	python3 ../regist_csv.py --truncate $< $(TABLE_REGIONS)
+	python3 regist_boundaries.py --truncate work/N03-$(REVISION).geojson $(TABLE_BOUNDARIES)
 
 clean:
 	rm -f dist/*
 
-.PHONY: all register clean
+.PHONY: all regist clean

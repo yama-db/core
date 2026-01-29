@@ -208,6 +208,7 @@ __marimo__/
 
 # added by anineco
 .DS_Store
+.my.cnf
 *.geojson
 *.zip
 *.xml

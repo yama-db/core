@@ -1,31 +1,17 @@
-all: done/digital_service_details done/book_details done/information_sources
+all:
+	for table in information_sources digital_service_details book_details; do \
+		python3 ../regist_csv.py --truncate csv/$$table.csv $$table; \
+	done
 
-done/digital_service_details: csv/digital_service_details.csv done/information_sources
-	python3 ../regist_csv.py --truncate $< ${@F}
-	touch $@
-
-done/book_details: csv/book_details.csv done/information_sources
-	python3 ../regist_csv.py --truncate $< ${@F}
-	touch $@
-
-done/information_sources: csv/information_sources.csv
-	python3 ../regist_csv.py --truncate $< ${@F}
-	touch $@
-
-regist: done/digital_service_details done/book_details done/information_sources	
-	python3 regist_book.py --truncate 9 csv/09_kyoto339.csv
-	python3 regist_book.py --truncate 10 csv/10_shizuoka100.csv
-	python3 regist_book.py --truncate 11 csv/11_ishikawa.csv
-	python3 regist_book.py --truncate 12 csv/12_oita.csv
-	python3 regist_book.py --truncate 13 csv/13_oita300.csv
-	python3 regist_book.py --truncate 14 csv/14_oita250.csv
-	python3 regist_book.py --truncate 18 csv/18_boso.csv
-	python3 regist_book.py --truncate 20 csv/20_suzuka300.csv
+regist:
+	for csv_file in csv/[0-9]*.csv; do \
+		source_id=$$(echo $$csv_file | sed -E 's|csv/([0-9]+)_.*\.csv|\1|'); \
+		python3 regist_book.py --truncate $$source_id $$csv_file; \
+	done
 
 unify:
 	python3 ../unify_pois.py stg_book_pois
 
 clean:
-	rm -f done/*
 
-.PHONY: all register unify clean
+.PHONY: all regist unify clean
