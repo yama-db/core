@@ -6,9 +6,9 @@ import uuid
 MY_NAMESPACE = uuid.UUID("ef11cf74-18d0-456b-85e8-895a3d93719c")
 
 
-def generate_source_uuid(source_name, remote_id):
-    input_str = f"{source_name}:{remote_id}"
-    return uuid.uuid5(MY_NAMESPACE, input_str)
+# UUIDを生成する
+def generate_source_uuid(source_name: str, remote_id: str) -> uuid.UUID:
+    return uuid.uuid5(MY_NAMESPACE, f"{source_name}:{remote_id}")
 
 
 if __name__ == "__main__":

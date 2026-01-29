@@ -12,11 +12,14 @@ from argparse import ArgumentParser
 from pathlib import Path
 
 import mysql.connector
-
 from shared import generate_source_uuid
 
 parser = ArgumentParser(description="YAMAP/YamarecoのTSVファイルを変換してCSV出力")
-parser.add_argument("source", choices=["yamap", "yamareco"], help="データソース（yamap または yamareco）を指定")
+parser.add_argument(
+    "source",
+    choices=["yamap", "yamareco"],
+    help="データソース（yamap または yamareco）を指定",
+)
 args = parser.parse_args()
 source = args.source
 
@@ -41,7 +44,10 @@ for row in reader:
     lat = float(row["lat"])
     if lon and lat:
         if not (abs(lon) <= 180.0 and abs(lat) <= 90.0):
-            print(f"Warning: {name} ({lat:.6f}, {lon:.6f}) is outside valid range.", file=sys.stderr)
+            print(
+                f"Warning: {name} ({lat:.6f}, {lon:.6f}) is outside valid range.",
+                file=sys.stderr,
+            )
             continue
         coord = f"POINT({lon:.6f} {lat:.6f})"
         cursor.execute(
@@ -55,18 +61,21 @@ for row in reader:
                 )
             ) AS is_japan;
             """,
-            (coord,)
+            (coord,),
         )
         result = cursor.fetchone()
         if not result["is_japan"]:
-            print(f"Warning: {name} ({lat:.6f}, {lon:.6f}) is outside Japan.", file=sys.stderr)
+            print(
+                f"Warning: {name} ({lat:.6f}, {lon:.6f}) is outside Japan.",
+                file=sys.stderr,
+            )
             continue
 
     if row["elevation_m"] == "NULL":
         row["elevation_m"] = ""
 
     raw_remote_id = row["raw_remote_id"]
-    row["source_uuid"] = generate_source_uuid(f"{source}-poi", raw_remote_id)
+    row["source_uuid"] = generate_source_uuid(f"{source}_poi", raw_remote_id)
 
     try:
         data = json.loads(row["kana"])
@@ -80,6 +89,7 @@ for row in reader:
         row["name"] = m_name.group(1).strip()
         row["kana"] = m_kana.group(1).strip()
     else:
+        row["name"] = name
         row["kana"] = kana
     writer.writerow(row)
     if m_name and m_kana:

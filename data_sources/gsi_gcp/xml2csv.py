@@ -7,7 +7,7 @@ import csv
 import sys
 from xml.etree import ElementTree as ET
 
-from common_lib.utils import generate_source_uuid
+from shared import generate_source_uuid
 
 namespaces = {
     "gml": "http://www.opengis.net/gml/3.2",
@@ -26,9 +26,7 @@ header = [
     "last_updated_at",
 ]
 
-writer = csv.DictWriter(
-    sys.stdout, fieldnames=header, quotechar="'", quoting=csv.QUOTE_MINIMAL
-)
+writer = csv.DictWriter(sys.stdout, fieldnames=header)
 writer.writeheader()
 
 for f in sys.argv[1:]:
@@ -51,7 +49,7 @@ for f in sys.argv[1:]:
             else:
                 continue
             raw_remote_id = pt.find("fid", namespaces).text  # 基盤地図情報レコードID
-            uuid = generate_source_uuid("gsi-gcp-poi", raw_remote_id)
+            uuid = generate_source_uuid("gsi_gcp_poi", raw_remote_id)
             lat, lon = pt.find(
                 "pos/gml:Point/gml:pos", namespaces
             ).text.split()  # 緯度, 経度
