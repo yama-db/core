@@ -183,8 +183,10 @@ CREATE TABLE poi_administrative_regions (
 
 CREATE TABLE poi_hierarchies (
     parent_id INT NOT NULL COMMENT '親POI ID',
+    parent_name VARCHAR(255) COMMENT '親POI名称',
     child_id INT NOT NULL COMMENT '子POI ID',
-    relation_type ENUM('MEMBER', 'SUB_RANGE') DEFAULT 'MEMBER' COMMENT '関係性',
+    child_name VARCHAR(255) COMMENT '子POI名称',
+    relation_type ENUM('MEMBER', 'SUB_RANGE') DEFAULT 'MEMBER' COMMENT '子POI属性',
     PRIMARY KEY (parent_id, child_id),
     FOREIGN KEY (parent_id) REFERENCES unified_pois(id),
     FOREIGN KEY (child_id) REFERENCES unified_pois(id)

@@ -1,0 +1,8 @@
+parent_id,parent_name,child_id,child_name,relation_type
+396,富士山,1530,白山岳,MEMBER
+396,富士山,19113,久須志岳,MEMBER
+396,富士山,18285,成就岳,MEMBER
+396,富士山,18409,伊豆岳,MEMBER
+396,富士山,19705,朝日岳,MEMBER
+396,富士山,19336,駒ヶ岳,MEMBER
+396,富士山,20923,三島岳,MEMBER
