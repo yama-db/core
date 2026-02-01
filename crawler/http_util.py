@@ -72,7 +72,6 @@ if __name__ == "__main__":
             res, code = get_with_retry(session, url)
             if res:
                 soup = bs4.BeautifulSoup(res.text, "html.parser")
-                soup = bs4.BeautifulSoup(res.text, "html.parser")
                 script = soup.find("script", id="__NEXT_DATA__")
                 assert script and script.string
                 print(script.string)

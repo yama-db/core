@@ -42,7 +42,7 @@ SELECT raw_remote_id AS id, name, lat, lon, elevation_m
 FROM yamareco_pois
 WHERE JSON_CONTAINS(poi_type_raw, 1)
   AND lat IS NOT NULL AND lon IS NOT NULL
-ORDER BY raw_remote_id DESC
+ORDER BY id DESC
 LIMIT 100
 EOS;
     } else {
@@ -51,7 +51,7 @@ SELECT raw_remote_id AS id, name, lat, lon, elevation_m
 FROM yamap_pois
 WHERE poi_type_raw IN ("19", "999")
   AND lat IS NOT NULL AND lon IS NOT NULL
-ORDER BY raw_remote_id DESC
+ORDER BY id DESC
 LIMIT 100
 EOS;
     }
