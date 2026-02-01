@@ -87,7 +87,7 @@ cursor.execute(
 unuseds = cursor.fetchall()
 
 with open(poi_hierarchies_csv, "w", encoding="utf-8") as f:
-    writer = csv.DictWriter(f, fieldnames=["parent_id", "child_id", "relation_type"])
+    writer = csv.DictWriter(f, fieldnames=["parent_id", "parent_name", "child_id", "child_name", "relation_type"])
     writer.writeheader()
     for relation, unused in zip(relations, unuseds, strict=True):
         parent_id = relation["parent_id"]
@@ -109,7 +109,9 @@ with open(poi_hierarchies_csv, "w", encoding="utf-8") as f:
         writer.writerow(
             {
                 "parent_id": parent_id,
+                "parent_name": relation["parent_name"],
                 "child_id": id,
+                "child_name": relation["child_name"],
                 "relation_type": "MEMBER",
             }
         )
