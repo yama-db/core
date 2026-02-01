@@ -1,6 +1,16 @@
+# Makefile for GSI GCP POIs
+
 TABLE_NAME := stg_gsi_gcp_pois
 
-all: dist/gsi_gcp.csv
+ZIP_FILES := $(addprefix archive/, $(shell cat ZIP_FILES))
+
+all: $(ZIP_FILES)
+	@echo "All required GCP ZIP files are present."
+	@echo "You can run 'make regist' to generate and register the data."
+
+$(ZIP_FILES):
+	@echo "Please download the required GCP ZIP files from GSI and place them in archive/ directory."
+	@exit 1
 
 dist/gsi_gcp.csv: work/.extracted
 	python3 xml2csv.py work/FG-GML-*.xml > $@

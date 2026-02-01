@@ -65,6 +65,19 @@ def link_pois(id, source_type, source_uuid):
         sys.exit(1)
 
 
+# POI階層情報を取得
+cursor.execute(
+    """
+    SELECT DISTINCT
+        parent_id, p.representative_name AS parent_name
+    FROM unified_pois AS p
+    JOIN poi_hierarchies ON p.id=parent_id
+    JOIN unified_pois AS c ON child_id=c.id
+    WHERE parent_id IS NOT NULL AND child_id IS NOT NULL
+    """
+)
+mt_ranges = { row["parent_name"]: row["parent_id"] for row in cursor.fetchall() }
+
 # 既存のリンクを削除
 cursor.execute("DELETE FROM poi_links WHERE source_type = %s", (source_type,))
 conn.commit()
@@ -74,22 +87,74 @@ column = "unified_poi_id" if table_name == "stg_book_pois" else "NULL"
 cursor.execute(
     f"SELECT source_uuid, names_json, elevation_m, {column} AS id FROM {table_name}"
 )
-count = 0  # 一致したPOIのカウント
+total = 0  # 一致したPOIのカウント
 for row in cursor.fetchall():
     source_uuid = row["source_uuid"]
-    names = [item.get("name", "") for item in json.loads(row["names_json"])]
+    names_json = json.loads(row["names_json"])
+    names = [name for item in names_json if (name := item.get("name"))]
+    if table_name in ["stg_gsi_dm25k_pois", "stg_gsi_vtexp_pois"]:
+        # まず山域名での一致を試みる
+        ids = [id for name in names if (id := mt_ranges.get(name))]
+        if ids:
+            placeholders = ",".join(["%s"] * len(ids))
+            cursor.execute(
+                f"""
+                SELECT
+                    id, representative_name,
+                    ST_Distance_Sphere(representative_geom, geom) AS distance_m
+                FROM unified_pois
+                CROSS JOIN {table_name}
+                WHERE source_uuid = %s AND id IN ({placeholders})
+                ORDER BY distance_m ASC
+                LIMIT 1
+                """,
+                (source_uuid, *ids)
+            )
+            result = cursor.fetchone()
+            if (distance_m := result["distance_m"]) < 5000:
+                id = result["id"]
+                representative_name = result["representative_name"]
+                print(
+                    f"Linking {names[0]} as mountain rangeto ID: {id} {representative_name} "
+                    f"(distance: {distance_m:.1f} m)"
+                )
+                link_pois(id, source_type, source_uuid)
+                total += 1
+                continue
+
     if table_name == "stg_book_pois":
-        cursor.execute(
-            """
-            SELECT
-                id, representative_name,
-                0 AS distance_m
-            FROM unified_pois
-            WHERE id = %s AND ABS(elevation_m - %s) <= 20
-            """,
-            (row["id"], row["elevation_m"]),
-        )
-    else:        
+        id = row["id"]
+        if elevation_m := row["elevation_m"]:
+            cursor.execute(
+                """
+                SELECT id, representative_name, 0 AS distance_m
+                FROM unified_pois
+                WHERE ABS(elevation_m - %s) <= 20 AND id IN (
+                    SELECT %s
+                    UNION
+                    SELECT parent_id FROM poi_hierarchies WHERE child_id = %s
+                    UNION
+                    SELECT child_id FROM poi_hierarchies WHERE parent_id = %s
+                )
+                """,
+                (elevation_m, id, id, id),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT id, representative_name, 0 AS distance_m
+                FROM unified_pois
+                WHERE id IN (
+                    SELECT %s
+                    UNION
+                    SELECT parent_id FROM poi_hierarchies WHERE child_id = %s
+                    UNION
+                    SELECT child_id FROM poi_hierarchies WHERE parent_id = %s
+                )
+                """,
+                (id, id, id),
+            )
+    else:
         cursor.execute(
             f"""
             SELECT
@@ -105,34 +170,31 @@ for row in cursor.fetchall():
             """,
             (source_uuid, radius),
         )
-    for result in cursor.fetchall():
-        id = result["id"]
-        representative_name = result["representative_name"]
-        distance_m = result["distance_m"]
-        if table_name != "stg_book_pois" and distance_m < 100:  # 100m未満は無条件でリンク
-            print(
-                f"Linking {names[0]} to ID: {id} {representative_name} "
-                f"(distance: {distance_m:.1f} m)"
-            )
-            link_pois(id, source_type, source_uuid)
-            count += 1
-            break
-
-        max_similarity = max(
-            Levenshtein.jaro_winkler(name, representative_name) for name in names
+    results = cursor.fetchall()
+    if not results:
+        continue
+    for result in results:
+        result["similarity"] = max(
+            Levenshtein.jaro_winkler(name, result["representative_name"])
+            for name in names
         )
+    sorted_results = sorted(results, key=lambda x: (x["distance_m"], -x["similarity"]))
+    nearest = sorted_results[0]
+    id = nearest["id"]
+    distance_m = nearest["distance_m"]
+    similarity = nearest["similarity"]
+    representative_name = nearest["representative_name"]
+    if table_name == "stg_book_pois" or distance_m < 100 or similarity >= 0.8:
+        if distance_m >= 100 or similarity < 0.8:
+            #print(
+            #    f"Linking {names[0]} to ID: {id} {representative_name} "
+            #    f"(distance: {distance_m:.1f} m, similarity: {similarity:.3f})"
+            #)
+            pass
+        link_pois(id, source_type, source_uuid)
+        total += 1
 
-        # 類似度が0.8以上であればリンクを作成
-        if max_similarity >= 0.8:
-            print(
-                f"Linking {names[0]} to ID: {id} {representative_name} "
-                f"(distance: {distance_m:.1f} m, similarity: {max_similarity:.3f})"
-            )
-            link_pois(id, source_type, source_uuid)
-            count += 1
-            break
-
-print(f"Total linked POIs: {count}")
+print(f"Total linked POIs: {total}")
 
 # 接続終了
 cursor.close()

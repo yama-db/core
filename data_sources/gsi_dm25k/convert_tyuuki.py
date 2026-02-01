@@ -21,6 +21,9 @@ def dms2deg(dms_str: str) -> float:
     return d + (m / 60) + (s / 3600)
 
 
+trans_table = str.maketrans('０１２３４５６７８９', '0123456789')
+
+
 def main():
     reader = csv.DictReader(sys.stdin)
     header = [
@@ -53,6 +56,8 @@ def main():
         if name.startswith("（") and name.endswith("）"):
             name = name[1:-1]
             alias_flag = True
+        if name.endswith(("尾根", "山脈", "山地")):
+            continue
         kana = row["注記文字の読み"]
         if kana.startswith("（") and kana.endswith("）"):
             kana = kana[1:-1]
@@ -66,7 +71,7 @@ def main():
             {
                 "source_uuid": uuid,
                 "raw_remote_id": raw_remote_id,
-                "name": name,
+                "name": name.translate(trans_table),
                 "kana": kana,
                 "lat": lat,
                 "lon": lon,
