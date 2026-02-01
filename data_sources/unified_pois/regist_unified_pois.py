@@ -42,7 +42,7 @@ if truncate:
         cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
         cursor.execute(
             "INSERT INTO poi_categories (id, display_name) VALUES (%s, %s)",
-            (category_id, display_name)
+            (category_id, display_name),
         )
         conn.commit()
         print(f"Table {table_name} truncated.")
@@ -76,7 +76,7 @@ try:
             %s
         )
         """,
-        values
+        values,
     )
     conn.commit()
     print(f"Inserted {cursor.rowcount} rows into {table_name}")

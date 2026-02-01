@@ -68,6 +68,8 @@ def insert_poi_data(values):
                 %s, %s, %s,
                 ST_GeomFromText(%s, 4326, "axis-order=long-lat"), %s, %s, %s
             )
+            ON DUPLICATE KEY UPDATE
+                names_json = JSON_MERGE_PRESERVE(names_json, VALUES(names_json))
             """,
             values,
         )

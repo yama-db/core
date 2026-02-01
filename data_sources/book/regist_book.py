@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# 書籍のPOIファイルを stg_book_pois のCSV形式で出力
+# 書籍のPOIファイルを stg_book_pois テーブルに登録
 
 import csv
 import json
 import os
+import re
 import sys
 from argparse import ArgumentParser
 from pathlib import Path
@@ -78,8 +79,46 @@ with open(csv_file, "r", encoding="utf-8-sig") as f:
         uuid = generate_source_uuid(f"NDL{ndl_id}_poi", raw_remote_id)
         name = row["name"]
         kana = row["kana"]
+        m_name = re.fullmatch(r"(.+?)[（\(](.+?)[）\)]", name)
+        m_kana = re.fullmatch(r"(.+?)[（\(](.+?)[）\)]", kana)
+
+        data = []
+        if m_name and m_kana:
+            data.append({
+                "name": m_name.group(1).strip(),
+                "kana": m_kana.group(1).strip(),
+            })
+            data.append({
+                "name": m_name.group(2).strip(),
+                "kana": m_kana.group(2).strip(),
+            })
+        elif m_name:
+            data.append({
+                "name": m_name.group(1).strip(),
+                "kana": kana,
+            })
+            data.append({
+                "name": m_name.group(2).strip(),
+                "kana": "",
+            })
+        elif m_kana:
+            data.append({
+                "name": name,
+                "kana": m_kana.group(1).strip(),
+            })
+            data.append({
+                "name": name,
+                "kana": m_kana.group(2).strip(),
+            })
+        else:
+            for i, k in enumerate(kana.split("・")):
+                data.append({
+                    "name": name,
+                    "kana": k,
+                })
+
         try:
-            names_json = json.dumps([{"name": name, "kana": kana}], ensure_ascii=False)
+            names_json = json.dumps(data, ensure_ascii=False)
         except Exception as e:
             print(
                 f"Error encoding JSON for name={name}, kana={kana}: {e}",

@@ -4,7 +4,7 @@ CREATE TABLE information_sources (
     id INT AUTO_INCREMENT PRIMARY KEY COMMENT '情報源ID',
     source_type ENUM('DIGITAL', 'BOOK', 'JOURNAL') NOT NULL COMMENT '情報源の種別',
     display_name VARCHAR(100) NOT NULL COMMENT '表示用名称',
-    reliability_level TINYINT DEFAULT 3 COMMENT '信頼度レベル(1-5)'
+    reliability_level TINYINT DEFAULT 5 COMMENT '信頼度順位（0が最高）'
 ) COMMENT '情報源マスタテーブル';
 
 CREATE TABLE digital_service_details (
@@ -194,12 +194,14 @@ CREATE TABLE poi_names (
     id INT AUTO_INCREMENT PRIMARY KEY COMMENT '名称ID',
     unified_poi_id INT NOT NULL COMMENT '統合実体ID',
     source_uuid BINARY(16) NOT NULL COMMENT '情報源UUID',
+    source_id INT NOT NULL COMMENT '情報源ID',
     name_text VARCHAR(255) COLLATE utf8mb4_bin NOT NULL COMMENT '表示用名称(異体字保持)',
     name_normalized VARCHAR(255) NOT NULL COMMENT '検索用正規化名称',
     name_reading VARCHAR(255) COMMENT '読み仮名',
     name_type ENUM('MAIN', 'ALIAS', 'OLD', 'LOCAL') DEFAULT 'MAIN' COMMENT '名称種別',
     is_preferred BOOLEAN DEFAULT FALSE COMMENT '代表名称フラグ',
     FOREIGN KEY (unified_poi_id) REFERENCES unified_pois(id),
+    FOREIGN KEY (source_id) REFERENCES information_sources(id),
     INDEX idx_source_uuid (source_uuid),
     INDEX idx_name_normalized (name_normalized)
 ) COMMENT 'POI名称テーブル';

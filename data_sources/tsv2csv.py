@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# YAMAP/Yamareco TSVファイルを変換して出力
+# YAMAP/Yamareco TSVファイルをCSV形式に変換して出力するスクリプト
 
 import csv
 import html
@@ -11,6 +11,7 @@ import sys
 from argparse import ArgumentParser
 from pathlib import Path
 
+import jaconv
 import mysql.connector
 from shared import generate_source_uuid
 
@@ -82,21 +83,35 @@ for row in reader:
     except json.JSONDecodeError:
         print(f"JSON Decode Error: {row['kana']}", file=sys.stderr)
         data = {}
-    kana = data.get("hira") or ""
-    m_name = re.match(r"(.*)[（\(](.*)[）\)]", name)
-    m_kana = re.match(r"(.*)[（\(](.*)[）\)]", kana)
+    hira = data.get("hira") or ""
+    kana = jaconv.kata2hira(hira) if hira else ""
+    m_name = re.fullmatch(r"(.+?)[（\(](.+?)[）\)]", name)
+    m_kana = re.fullmatch(r"(.+?)[（\(](.+?)[）\)]", kana)
     if m_name and m_kana:
         row["name"] = m_name.group(1).strip()
         row["kana"] = m_kana.group(1).strip()
-    else:
-        row["name"] = name
-        row["kana"] = kana
-    writer.writerow(row)
-    if m_name and m_kana:
-        row["source_uuid"] = ""
+        writer.writerow(row)
         row["name"] = m_name.group(2).strip()
         row["kana"] = m_kana.group(2).strip()
         writer.writerow(row)
+    elif m_name:
+        row["name"] = m_name.group(1).strip()
+        row["kana"] = kana
+        writer.writerow(row)
+        row["name"] = m_name.group(2).strip()
+        row["kana"] = ""
+        writer.writerow(row)
+    elif m_kana:
+        row["name"] = name
+        row["kana"] = m_kana.group(1).strip()
+        writer.writerow(row)
+        row["kana"] = m_kana.group(2).strip()
+        writer.writerow(row)
+    else:
+        row["name"] = name
+        for k in kana.split("・"):
+            row["kana"] = k
+            writer.writerow(row)
 
 cursor.close()
 conn.close()

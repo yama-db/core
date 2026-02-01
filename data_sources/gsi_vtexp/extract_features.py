@@ -42,6 +42,9 @@ def translate_gaiji(name: str, gaiji_flg: str) -> str:
     return name
 
 
+trans_table = str.maketrans('０１２３４５６７８９', '0123456789')
+
+
 def extract_features(file_path, writer):
     x = file_path.parent.name
     y = file_path.stem
@@ -59,6 +62,8 @@ def extract_features(file_path, writer):
                 if poi_type_raw != "山":
                     continue
                 name = properties["name"]
+                if name.endswith(("尾根", "山脈", "山地")):
+                    continue
                 gaijiFlg = properties["gaijiFlg"] or "0"
                 if gaijiFlg != "0":
                     name = translate_gaiji(name, gaijiFlg)
@@ -70,7 +75,7 @@ def extract_features(file_path, writer):
                         {
                             "source_uuid": uuid if i == 0 else None,
                             "raw_remote_id": raw_remote_id,
-                            "name": name,
+                            "name": name.translate(trans_table),
                             "kana": kana.strip(),
                             "lon": lon,
                             "lat": lat,

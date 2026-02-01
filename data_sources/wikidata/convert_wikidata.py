@@ -93,13 +93,13 @@ with open(data_csv, encoding="utf-8-sig") as f:
         if m := re.search(r"^(.*?)[（\(]", itemLabel):
             label = m.group(1).strip()
         names_json = extract_name_and_kana(extract, label)
-        for i, name_kana in enumerate(names_json):
+        for item in names_json:
             writer.writerow(
                 {
-                    "source_uuid": source_uuid if i == 0 else None,
+                    "source_uuid": source_uuid,
                     "raw_remote_id": raw_remote_id,
-                    "name": name_kana["name"],
-                    "kana": name_kana["kana"],
+                    "name": item["name"],
+                    "kana": item["kana"],
                     "lat": lat,
                     "lon": lon,
                     "elevation_m": elevation_m,
