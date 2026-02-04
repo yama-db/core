@@ -141,6 +141,7 @@ CREATE TABLE unified_pois (
     id INT AUTO_INCREMENT PRIMARY KEY COMMENT '統合実体ID',
     category_id VARCHAR(20) COLLATE ascii_bin NOT NULL COMMENT '種別ID',
     representative_name VARCHAR(255) COLLATE utf8mb4_bin COMMENT '代表名称(異体字保持)',
+    representative_kana VARCHAR(255) COMMENT '代表名称読み仮名',
     representative_geom POINT NOT NULL /*!80003 SRID 4326 */ COMMENT '代表座標',
     display_lat DECIMAL(10, 7) GENERATED ALWAYS AS (ST_Latitude(representative_geom)) VIRTUAL COMMENT '緯度',
     display_lon DECIMAL(11, 7) GENERATED ALWAYS AS (ST_Longitude(representative_geom)) VIRTUAL COMMENT '経度',
