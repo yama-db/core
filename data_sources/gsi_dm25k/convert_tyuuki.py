@@ -5,9 +5,8 @@ import csv
 import re
 import sys
 
-from shared import generate_source_uuid
-
 from convert_pua import convert_pua
+from shared import generate_source_uuid
 
 
 #
@@ -21,7 +20,7 @@ def dms2deg(dms_str: str) -> float:
     return d + (m / 60) + (s / 3600)
 
 
-trans_table = str.maketrans('０１２３４５６７８９', '0123456789')
+trans_table = str.maketrans("０１２３４５６７８９", "0123456789")
 
 
 def main():

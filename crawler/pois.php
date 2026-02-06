@@ -5,7 +5,7 @@ header("Content-Type: application/geo+json; charset=utf-8");
 $target = isset($_GET['db']) ? $_GET['db'] : 'yamap';
 
 function get_db_config() {
-    $cnf_path = '/home/anineco/.my.cnf'; # CONFIG: Adjust path as needed
+    $cnf_path = 'crawler.my.cnf'; # CONFIG: Adjust path as needed
     if (!file_exists($cnf_path)) return null;
     $config = parse_ini_file($cnf_path, true, INI_SCANNER_RAW);
     $client = isset($config['client']) ? $config['client'] : null;

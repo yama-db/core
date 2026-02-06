@@ -19,6 +19,7 @@ parser.add_argument(
         "stg_yamap_pois",
         "stg_yamareco_pois",
         "stg_wikidata_pois",
+        "stg_legacy_pois",
         "stg_book_pois",
     ],
     help="POIデータソースのテーブル名",
@@ -66,17 +67,15 @@ def link_pois(id, source_type, source_uuid):
 
 
 # POI階層情報を取得
-cursor.execute(
-    """
+cursor.execute("""
     SELECT DISTINCT
         parent_id, p.representative_name AS parent_name
     FROM unified_pois AS p
     JOIN poi_hierarchies ON p.id=parent_id
     JOIN unified_pois AS c ON child_id=c.id
     WHERE parent_id IS NOT NULL AND child_id IS NOT NULL
-    """
-)
-mt_ranges = { row["parent_name"]: row["parent_id"] for row in cursor.fetchall() }
+    """)
+mt_ranges = {row["parent_name"]: row["parent_id"] for row in cursor.fetchall()}
 
 # 既存のリンクを削除
 cursor.execute("DELETE FROM poi_links WHERE source_type = %s", (source_type,))
@@ -108,18 +107,17 @@ for row in cursor.fetchall():
                 ORDER BY distance_m ASC
                 LIMIT 1
                 """,
-                (source_uuid, *ids)
+                (source_uuid, *ids),
             )
             result = cursor.fetchone()
             if (distance_m := result["distance_m"]) < 5000:
                 id = result["id"]
                 representative_name = result["representative_name"]
+                distance_m = result["distance_m"]
                 print(
-                    f"Linking {names[0]} as mountain rangeto ID: {id} {representative_name} "
-                    f"(distance: {distance_m:.1f} m)"
+                    f"{names[0]} is a mountain range matched to ID: {id} (distance: {distance_m:.1f} m)"
                 )
-                link_pois(id, source_type, source_uuid)
-                total += 1
+                print("skipping further matching.")
                 continue
 
     if table_name == "stg_book_pois":
@@ -186,10 +184,10 @@ for row in cursor.fetchall():
     representative_name = nearest["representative_name"]
     if table_name == "stg_book_pois" or distance_m < 100 or similarity >= 0.8:
         if distance_m >= 100 or similarity < 0.8:
-            #print(
+            # print(
             #    f"Linking {names[0]} to ID: {id} {representative_name} "
             #    f"(distance: {distance_m:.1f} m, similarity: {similarity:.3f})"
-            #)
+            # )
             pass
         link_pois(id, source_type, source_uuid)
         total += 1

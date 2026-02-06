@@ -208,13 +208,13 @@ __marimo__/
 
 # added by anineco
 .DS_Store
-.my.cnf
+*.my.cnf
 *.geojson
 *.zip
 *.xml
-archive/*
-!.gitkeep
 tiles/
 work/
 private/
 test/
+**/archive/*
+!**/archive/.gitkeep

@@ -14,4 +14,4 @@ else
     WHERE poi_type_raw IN ("19", "999")
     '
 fi
-mysql -B -e "$SQL"
+mysql --defaults-file=crawler.my.cnf -B -e "$SQL"

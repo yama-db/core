@@ -22,6 +22,7 @@ pua = {
 }
 
 
+# gaijiFlgをもとに外字・環境依存文字を変換する
 def translate_gaiji(name: str, gaiji_flg: str) -> str:
     pattern = gaiji_flg.strip("()")
     i = 0
@@ -42,7 +43,21 @@ def translate_gaiji(name: str, gaiji_flg: str) -> str:
     return name
 
 
-trans_table = str.maketrans('０１２３４５６７８９', '0123456789')
+# 山名中の全角数字は半角数字に変換する
+trans_table = str.maketrans("０１２３４５６７８９", "0123456789")
+
+# 誤記訂正データの読み込み
+with open("raw/gsi_vtexp_corrections.csv", "r", encoding="utf-8-sig") as f:
+    reader = csv.DictReader(f)
+    corrections = {
+        row["raw_remote_id"]: {
+            "name": row["name"],
+            "kana": row["kana"],
+            "name_fixed": row["name_fixed"],
+            "kana_fixed": row["kana_fixed"],
+        }
+        for row in reader
+    }
 
 
 def extract_features(file_path, writer):
@@ -69,6 +84,16 @@ def extract_features(file_path, writer):
                     name = translate_gaiji(name, gaijiFlg)
                 kana = properties["kana"]
                 raw_remote_id = f"{x}-{y}-{index}"
+                if raw_remote_id in corrections:
+                    corr = corrections[raw_remote_id]
+                    assert (
+                        name == corr["name"]
+                    ), f"名前の不一致: {name} != {corr['name']} ({raw_remote_id})"
+                    assert (
+                        kana == corr["kana"]
+                    ), f"かなの不一致: {kana} != {corr['kana']} ({raw_remote_id})"
+                    name = corr["name_fixed"]
+                    kana = corr["kana_fixed"]
                 uuid = generate_source_uuid("gsi_vtexp_poi", raw_remote_id)
                 for i, kana in enumerate(properties["kana"].split(",")):
                     writer.writerow(

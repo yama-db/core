@@ -1,45 +1,25 @@
 #!/opt/local/bin/bash -eu
+# Extract script for GSI GCP data for January 1, 2026
 
-# Extract GCP xml files from ALL1 zip files
+VERSION=20260101
 
 rm -rf work/*
 
-for c in archive/FG-GML-*-ALL1-*.zip; do
-  echo "Extracting $c"
-  tmp=${c##*/}
-  unzip -q -d work/${tmp%.zip} $c '*-01-*'
+for z in archive/FG-GML-*-ALL1-${VERSION}-*.zip; do
+    echo Extracting $z
+    subdir=$(basename $z .zip)
+    unzip -q -d work/$subdir $z
 done
 
-declare -A zip01
+declare -A unziped
 
-for z in work/*/FG-GML-*-01-*.zip; do
-  b=${z##*/}
-  if [ -z "${zip01[$b]:-}" ]; then
-    echo "Extracting $z"
-    set +e
-    unzip -q -d work $z '*-GCP-*'
-    set -e
-    zip01[$b]=$z
-  fi
-done
-
-# Extract ElevPt xml files from ALL2 zip files
-
-for c in archive/FG-GML-*-ALL2-*.zip; do
-  echo "Extracting $c"
-  tmp=${c##*/}
-  unzip -q -d work/${tmp%.zip} $c '*-09-*'
-done
-
-declare -A zip09
-
-for z in work/*/FG-GML-*-09-*.zip; do
-  b=${z##*/}
-  if [ -z "${zip09[$b]:-}" ]; then
-    echo "Extracting $z"
-    set +e
-    unzip -q -d work $z '*-ElevPt-*'
-    set -e
-    zip09[$b]=$z
-  fi
+for z in work/*/FG-GML-*-ALL-*.zip; do
+    b=$(basename $z)
+    if [ -z "${unziped[$b]:-}" ]; then
+        echo Extracting $z
+        set +e
+        unzip -q -d work $z '*-GCP-*' '*-ElevPt-*'
+        set -e
+        unziped[$b]=$z
+    fi
 done

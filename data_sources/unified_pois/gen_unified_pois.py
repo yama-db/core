@@ -17,10 +17,9 @@ poi_hierarchies_csv = args.poi_hierarchies_csv
 
 # MySQL接続の確立
 try:
-    my_cnf = Path(sys.prefix).parent / ".my.cnf"
+    my_cnf = Path(sys.prefix).parent / "legacy.my.cnf"
     conn = mysql.connector.connect(
         option_files=str(my_cnf),
-        database="anineco_tozan",
         autocommit=False,
     )
     cursor = conn.cursor(dictionary=True)
@@ -39,16 +38,19 @@ cursor.executemany(
 )
 conn.commit()
 
-pois = [{"id": i, "name": "", "lat": 0.0, "lon": 0.0, "alt": 0.0} for i in range(1, max_id + 1)]
+pois = [
+    {"id": i, "name": "", "lat": 0.0, "lon": 0.0, "alt": 0.0}
+    for i in range(1, max_id + 1)
+]
 
 cursor.execute(
     """
-    SELECT id, s.name, lat, lon, alt
+    SELECT id, s.name, s.kana, lat, lon, alt
     FROM geom
     JOIN sanmei AS s USING (id)
     WHERE type = 1
     ORDER BY id ASC
-    """
+    """,
 )
 for row in cursor.fetchall():
     id = row["id"]
@@ -60,7 +62,9 @@ cursor.execute(
     SELECT
         p.id AS parent_id,
         p.name AS parent_name,
+        p.kana AS parent_kana,
         c.name AS child_name,
+        c.kana AS child_kana,
         g.lat,
         g.lon,
         g.alt
@@ -68,7 +72,7 @@ cursor.execute(
     JOIN sanmei AS p USING (id)
     JOIN sanmei AS c USING (id)
     WHERE p.type = 0 AND c.type = 1
-    """
+    """,
 )
 relations = cursor.fetchall()
 
@@ -87,13 +91,23 @@ cursor.execute(
 unuseds = cursor.fetchall()
 
 with open(poi_hierarchies_csv, "w", encoding="utf-8") as f:
-    writer = csv.DictWriter(f, fieldnames=["parent_id", "parent_name", "child_id", "child_name", "relation_type"])
+    writer = csv.DictWriter(
+        f,
+        fieldnames=[
+            "parent_id",
+            "parent_name",
+            "child_id",
+            "child_name",
+            "relation_type",
+        ],
+    )
     writer.writeheader()
     for relation, unused in zip(relations, unuseds, strict=True):
         parent_id = relation["parent_id"]
         pois[parent_id - 1].update(
             {
                 "name": relation["parent_name"],
+                "kana": relation["parent_kana"],
             }
         )
         id = unused["id"]
@@ -101,6 +115,7 @@ with open(poi_hierarchies_csv, "w", encoding="utf-8") as f:
             {
                 "id": id,
                 "name": relation["child_name"],
+                "kana": relation["child_kana"],
                 "lat": relation["lat"],
                 "lon": relation["lon"],
                 "alt": relation["alt"],
@@ -117,7 +132,7 @@ with open(poi_hierarchies_csv, "w", encoding="utf-8") as f:
         )
 
 with open(unified_pois_csv, "w", encoding="utf-8") as f:
-    writer = csv.DictWriter(f, fieldnames=["id", "name", "lat", "lon", "alt"])
+    writer = csv.DictWriter(f, fieldnames=["id", "name", "kana", "lat", "lon", "alt"])
     writer.writeheader()
     for poi in pois:
         writer.writerow(poi)
