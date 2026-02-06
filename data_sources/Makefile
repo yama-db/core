@@ -1,8 +1,13 @@
 # Makefile for data_sources
 
-POIDIRS := gsi_vtexp gsi_dm25k yamap yamareco wikidata book
+POIDIRS := gsi_vtexp gsi_dm25k yamap yamareco wikidata legacy book
 
-regist:
+all:
+	@for dir in $(POIDIRS); do \
+		$(MAKE) -C $$dir $@; \
+	done
+
+import:
 	@for dir in $(POIDIRS); do \
 		$(MAKE) -C $$dir $@; \
 	done
@@ -10,6 +15,12 @@ regist:
 unify:
 	@for dir in $(POIDIRS); do \
 		$(MAKE) -C $$dir $@; \
+	done \
+	./import_poi_names.sh
+
+clean:
+	@for dir in $(POIDIRS); do \
+		$(MAKE) -C $$dir $@; \
 	done
 
-.PHONY: all regist unify clean
+.PHONY: all import unify clean

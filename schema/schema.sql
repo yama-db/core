@@ -51,7 +51,7 @@ CREATE TABLE poi_categories (
 CREATE TABLE stg_gsi_dm25k_pois (
     source_uuid BINARY(16) PRIMARY KEY COMMENT 'UUID v5',
     raw_remote_id VARCHAR(100) COLLATE ascii_bin COMMENT '元データのID',
-    names_json JSON COMMENT '名称配列(別名含む)',
+    names_json JSON COMMENT '名称配列',
     geom POINT NOT NULL /*!80003 SRID 4326 */ COMMENT '地理位置',
     elevation_m DECIMAL(6, 1) COMMENT '標高（推定）',
     -- 個別の属性
@@ -63,7 +63,7 @@ CREATE TABLE stg_gsi_dm25k_pois (
 CREATE TABLE stg_gsi_vtexp_pois (
     source_uuid BINARY(16) PRIMARY KEY COMMENT 'UUID v5',
     raw_remote_id VARCHAR(100) COLLATE ascii_bin COMMENT '元データのID',
-    names_json JSON COMMENT '名称配列(別名含む)',
+    names_json JSON COMMENT '名称配列',
     geom POINT NOT NULL /*!80003 SRID 4326 */ COMMENT '地理位置',
     elevation_m DECIMAL(6, 1) COMMENT '標高（推定）',
     -- 個別の属性
@@ -87,7 +87,7 @@ CREATE TABLE stg_gsi_gcp_pois (
 CREATE TABLE stg_yamap_pois (
     source_uuid BINARY(16) PRIMARY KEY COMMENT 'UUID v5',
     raw_remote_id VARCHAR(100) COLLATE ascii_bin COMMENT 'API上の数値ID等',
-    names_json JSON COMMENT '名称配列(別名含む)',
+    names_json JSON COMMENT '名称配列',
     geom POINT NOT NULL /*!80003 SRID 4326 */ COMMENT '地理位置',
     elevation_m DECIMAL(6, 1) COMMENT '標高',
     -- 個別の属性
@@ -100,7 +100,7 @@ CREATE TABLE stg_yamap_pois (
 CREATE TABLE stg_yamareco_pois (
     source_uuid BINARY(16) PRIMARY KEY COMMENT 'UUID v5',
     raw_remote_id VARCHAR(100) COLLATE ascii_bin COMMENT 'API上の数値ID等',
-    names_json JSON COMMENT '名称配列(別名含む)',
+    names_json JSON COMMENT '名称配列',
     geom POINT NOT NULL /*!80003 SRID 4326 */ COMMENT '地理位置',
     elevation_m DECIMAL(6, 1) COMMENT '標高',
     -- 個別の属性
@@ -113,7 +113,7 @@ CREATE TABLE stg_yamareco_pois (
 CREATE TABLE stg_wikidata_pois (
     source_uuid BINARY(16) PRIMARY KEY COMMENT 'UUID v5',
     raw_remote_id VARCHAR(100) COLLATE ascii_bin COMMENT 'Wikidata QID',
-    names_json JSON COMMENT '名称配列(別名含む)',
+    names_json JSON COMMENT '名称配列',
     geom POINT /*!80003 SRID 4326 */ COMMENT '地理位置',
     elevation_m DECIMAL(6, 1) COMMENT '標高',
     -- 個別の属性
@@ -122,10 +122,22 @@ CREATE TABLE stg_wikidata_pois (
     last_updated_at DATETIME COMMENT 'データ更新日'
 ) COMMENT 'Wikidata POIデータ';
 
+CREATE TABLE stg_legacy_pois (
+    source_uuid BINARY(16) PRIMARY KEY COMMENT 'UUID v5',
+    raw_remote_id VARCHAR(100) COLLATE ascii_bin COMMENT 'ID',
+    names_json JSON COMMENT '名称配列',
+    geom POINT NOT NULL /*!80003 SRID 4326 */ COMMENT '地理位置',
+    elevation_m DECIMAL(6, 1) COMMENT '標高',
+    -- 個別の属性
+    poi_type_raw VARCHAR(50) COMMENT '種別名',
+    last_updated_at DATETIME COMMENT 'データ更新日',
+    SPATIAL INDEX(geom)
+) COMMENT '山名一覧 on the Web地図（旧DB）';
+
 CREATE TABLE stg_book_pois (
     source_uuid BINARY(16) PRIMARY KEY COMMENT 'UUID v5',
     raw_remote_id VARCHAR(100) COLLATE ascii_bin COMMENT '掲載ページ・項番等',
-    names_json JSON COMMENT '名称配列(別名含む)',
+    names_json JSON COMMENT '名称配列',
     geom POINT /*!80003 SRID 4326 */ COMMENT '地理位置（推定）',
     elevation_m DECIMAL(6, 1) COMMENT '標高',
     -- 個別の属性
@@ -164,6 +176,7 @@ CREATE TABLE poi_links (
         'YAMAP',
         'YAMARECO',
         'WIKIDATA',
+        'LEGACY',
         'BOOK'
     ) NOT NULL COMMENT '参照先テーブル種別',
     source_uuid BINARY(16) NOT NULL COMMENT '情報源UUID',

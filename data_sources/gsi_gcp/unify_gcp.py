@@ -8,6 +8,8 @@ from pathlib import Path
 
 import mysql.connector
 
+EPS = 40  # 位置の許容誤差[m]
+
 # コマンドライン引数の解析
 parser = ArgumentParser(description="GSI GCPを統合POIにリンク")
 parser.add_argument(
@@ -17,8 +19,8 @@ parser.add_argument(
     "-r",
     "--radius",
     type=int,
-    default=40,
-    help="バッファの半径[m] (デフォルト: 40)",
+    default=EPS,
+    help=f"バッファの半径[m] (デフォルト: {EPS})",
 )
 args = parser.parse_args()
 table_name = args.table_name
@@ -44,7 +46,7 @@ cursor.execute(
         poi_type_raw VARCHAR(50) PRIMARY KEY,
         min_zoom_level TINYINT NOT NULL
     )
-    """
+    """,
 )
 cursor.executemany(
     "INSERT INTO poi_weights (poi_type_raw, min_zoom_level) VALUES (%s, %s)",
@@ -75,7 +77,7 @@ for row in cursor.fetchall():
         FROM unified_pois
         WHERE id = %s
         """,
-        (radius, id)
+        (radius, id),
     )
     # バッファ内で最も標高の高いPOIを取得
     cursor.execute(
@@ -85,7 +87,7 @@ for row in cursor.fetchall():
         WHERE ST_Within(geom, @buffer)
         ORDER BY elevation_m DESC
         LIMIT 1
-        """
+        """,
     )
     result = cursor.fetchone()
     if not result:
@@ -101,7 +103,7 @@ for row in cursor.fetchall():
         WHERE ST_Within(geom, @buffer)
         ORDER BY min_zoom_level ASC
         LIMIT 1
-        """
+        """,
     )
     result = cursor.fetchone()
     assert result, "Expected at least one POI type weight"
@@ -117,14 +119,14 @@ for row in cursor.fetchall():
                 target.min_zoom_level = %s
             WHERE target.id = %s
             """,
-            (source_uuid, min_zoom_level, id)
+            (source_uuid, min_zoom_level, id),
         )
         cursor.execute(
             """
             INSERT INTO poi_links (unified_poi_id, source_type, source_uuid)
             VALUES (%s, %s, %s)
             """,
-            (id, source_type, source_uuid)
+            (id, source_type, source_uuid),
         )
         conn.commit()
     except mysql.connector.Error as e:

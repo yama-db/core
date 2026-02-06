@@ -2,25 +2,22 @@
 
 TABLE_NAME := stg_gsi_vtexp_pois
 
-all: archive/mokuroku.csv.gz
-	@echo "All required VTEXP files are present."
-	@echo "You can run 'make regist' to generate and register the data."
+all: dist/gsi_vtexp.csv
 
-archive/mokuroku.csv.gz:
-	@echo "Please download mokuroku.csv.gz from GSI VTEXP site and place it in archive/ directory."
-	@echo "run './get_tiles.sh' to download GSI VTEXP tiles."
-	@exit 1
-
-dist/gsi_vtexp.csv: extract_features.py
+dist/gsi_vtexp.csv: extract_features.py archive/.downloaded
 	python3 extract_features.py archive/tiles/ > $@
 
-regist: dist/gsi_vtexp.csv
-	python3 ../regist_pois.py --truncate $< $(TABLE_NAME)
+archive/.downloaded:
+	@echo "Please run './get_tiles.sh' to download VTEXP tiles."
+	@echo "It may take a long time and a large amount of disk space."
+	@exit 1
+
+import: dist/gsi_vtexp.csv
+	python3 ../import_pois.py --truncate $< $(TABLE_NAME)
 
 unify:
 	python3 ../unify_pois.py $(TABLE_NAME)
 
-clean:
-	rm -f dist/*
+clean: ;
 
-.PHONY: all clean regist unify
+.PHONY: all clean import unify

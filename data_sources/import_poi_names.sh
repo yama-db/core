@@ -60,11 +60,12 @@ import_poi_names "stg_gsi_dm25k_pois" "GSI_DM25K"
 import_poi_names "stg_yamap_pois" "YAMAP"
 import_poi_names "stg_yamareco_pois" "YAMARECO"
 import_poi_names "stg_wikidata_pois" "WIKIDATA"
+import_poi_names "stg_legacy_pois" "LEGACY"
 import_poi_names "stg_book_pois" "BOOK"
 
 mysql --defaults-file=$PROJECT_ROOT/.my.cnf <<EOS
 UPDATE poi_names SET is_preferred = 0;
-UPDATE poi_names 
+UPDATE poi_names
 JOIN (
     SELECT 
         p.id,

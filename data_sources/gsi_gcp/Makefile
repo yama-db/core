@@ -2,30 +2,29 @@
 
 TABLE_NAME := stg_gsi_gcp_pois
 
-ZIP_FILES := $(addprefix archive/, $(shell cat ZIP_FILES))
+FG_GML_FILES := $(shell cat FG-GML-file-list.txt)
 
-all: $(ZIP_FILES)
-	@echo "All required GCP ZIP files are present."
-	@echo "You can run 'make regist' to generate and register the data."
+all: dist/gsi_gcp.csv
+	@echo "All required raw files are present."
 
-$(ZIP_FILES):
-	@echo "Please download the required GCP ZIP files from GSI and place them in archive/ directory."
-	@exit 1
-
-dist/gsi_gcp.csv: work/.extracted
+dist/gsi_gcp.csv: xml2csv.py work/.extracted
 	python3 xml2csv.py work/FG-GML-*.xml > $@
 
-work/.extracted:
+work/.extracted: $(FG_GML_FILES)
 	./extract.sh
 	touch $@
 
-regist: dist/gsi_gcp.csv
-	python3 ../regist_pois.py --truncate $< $(TABLE_NAME)
+$(FG_GML_FILES):
+	@echo "Please download '$(@F)'."
+	@exit 1
+
+import: dist/gsi_gcp.csv
+	python3 ../import_pois.py --truncate $< $(TABLE_NAME)
 
 unify:
 	python3 unify_gcp.py $(TABLE_NAME)
 
 clean:
-	rm -rf dist/* work/*
+	rm -rf work/.extracted work/*
 
-.PHONY: all regist unify clean
+.PHONY: all import unify clean
