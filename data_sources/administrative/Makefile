@@ -1,3 +1,6 @@
+# Makefile for Administrative Boundaries
+.DELETE_ON_ERROR:
+
 REVISION := 20250101
 
 TABLE_REGIONS := administrative_regions

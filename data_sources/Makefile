@@ -15,8 +15,7 @@ import:
 unify:
 	@for dir in $(POIDIRS); do \
 		$(MAKE) -C $$dir $@; \
-	done \
-	./import_poi_names.sh
+	done
 
 clean:
 	@for dir in $(POIDIRS); do \

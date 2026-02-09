@@ -1,4 +1,5 @@
 # Makefile for unified_pois data source
+.DELETE_ON_ERROR:
 
 all: dist/unified_pois.csv
 

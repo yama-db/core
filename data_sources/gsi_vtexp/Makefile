@@ -1,10 +1,11 @@
 # Makefile for GSI VTEXP POIs
+.DELETE_ON_ERROR:
 
 TABLE_NAME := stg_gsi_vtexp_pois
 
 all: dist/gsi_vtexp.csv
 
-dist/gsi_vtexp.csv: extract_features.py archive/.downloaded
+dist/gsi_vtexp.csv: extract_features.py raw/gsi_vtexp_corrections.csv archive/.downloaded
 	python3 extract_features.py archive/tiles/ > $@
 
 archive/.downloaded:

@@ -1,4 +1,5 @@
 # Makefile for processing geographic data
+.DELETE_ON_ERROR:
 
 SOURCE := legacy
 TABLE_NAME := stg_$(SOURCE)_pois
