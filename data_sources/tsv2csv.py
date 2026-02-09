@@ -6,7 +6,6 @@
 import csv
 import html
 import json
-import re
 import sys
 from argparse import ArgumentParser
 from pathlib import Path
@@ -87,12 +86,6 @@ try:
 
             raw_remote_id = row["raw_remote_id"]
             row["source_uuid"] = generate_source_uuid(f"{source}_poi", raw_remote_id)
-
-            pattern = r"(.+?)[（\(](.+?)[）\)]"
-            if m := re.fullmatch(pattern, name):
-                name = m.group(1).strip()
-            if m := re.fullmatch(pattern, kana):
-                kana = m.group(1).strip()
             row["name"] = name
             row["kana"] = kana
             writer.writerow(row)

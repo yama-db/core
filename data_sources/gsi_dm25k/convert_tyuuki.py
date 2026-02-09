@@ -5,22 +5,18 @@ import csv
 import re
 import sys
 
+import regex
 from convert_pua import convert_pua
 from shared import generate_source_uuid
 
 
-#
 # 度分秒形式の文字列を10進度に変換
-#
 def dms2deg(dms_str: str) -> float:
     r = re.match(r"^(\d+)(\d\d)(\d\d(\.\d+)?)$", dms_str)
     d = float(r.group(1))
     m = float(r.group(2))
     s = float(r.group(3))
     return d + (m / 60) + (s / 3600)
-
-
-trans_table = str.maketrans("０１２３４５６７８９", "0123456789")
 
 
 def main():
@@ -70,7 +66,7 @@ def main():
             {
                 "source_uuid": uuid,
                 "raw_remote_id": raw_remote_id,
-                "name": name.translate(trans_table),
+                "name": name,
                 "kana": kana,
                 "lat": lat,
                 "lon": lon,
