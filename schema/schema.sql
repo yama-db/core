@@ -179,9 +179,12 @@ CREATE TABLE poi_links (
         'LEGACY',
         'BOOK'
     ) NOT NULL COMMENT '参照先テーブル種別',
+    source_id INT NOT NULL COMMENT '情報源ID',
     source_uuid BINARY(16) NOT NULL COMMENT '情報源UUID',
     PRIMARY KEY (unified_poi_id, source_uuid),
+    UNIQUE INDEX uq_poi_source_id (unified_poi_id, source_id),
     FOREIGN KEY (unified_poi_id) REFERENCES unified_pois(id),
+    FOREIGN KEY (source_id) REFERENCES information_sources(id),
     INDEX idx_source_uuid (source_uuid)
 ) COMMENT 'POIと元データの関連付けテーブル';
 

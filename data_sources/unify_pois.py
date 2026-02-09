@@ -50,14 +50,36 @@ except mysql.connector.Error as e:
 
 
 # リンク挿入関数
-def link_pois(id, source_type, source_uuid):
+def link_pois(id, source_type, source_id, source_uuid, distance_m):
+    cursor.execute(
+        f"""
+        SELECT
+            raw_remote_id,
+            names_json->>'$[0].name' AS name
+        FROM unified_pois
+        JOIN poi_links AS p ON id = unified_poi_id
+        JOIN {table_name} USING (source_uuid)
+        WHERE id = %s AND p.source_id = %s
+            AND ST_Distance_Sphere(geom, representative_geom) <= %s
+        LIMIT 1
+        """,
+        (id, source_id, distance_m),
+    )
+    if existing_link := cursor.fetchone():
+        raw_remote_id = existing_link["raw_remote_id"]
+        name = existing_link["name"]
+        print(
+            f"Skipping link insertion to ID: {id}, already linked to {raw_remote_id} ({name})"
+        )
+        return
     try:
         cursor.execute(
             """
-            INSERT INTO poi_links (unified_poi_id, source_type, source_uuid)
-            VALUES (%s, %s, %s)
+            INSERT INTO poi_links (unified_poi_id, source_type, source_id, source_uuid)
+            VALUES (%s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE source_uuid = VALUES(source_uuid)
             """,
-            (id, source_type, source_uuid),
+            (id, source_type, source_id, source_uuid),
         )
         conn.commit()
     except mysql.connector.Error as e:
@@ -82,72 +104,65 @@ cursor.execute("DELETE FROM poi_links WHERE source_type = %s", (source_type,))
 conn.commit()
 
 # POIごとに処理
-column = "unified_poi_id" if table_name == "stg_book_pois" else "NULL"
-cursor.execute(
-    f"SELECT source_uuid, names_json, elevation_m, {column} AS id FROM {table_name}"
-)
+if table_name == "stg_book_pois":
+    cursor.execute(
+        f"""
+        SELECT source_uuid, source_id, names_json, elevation_m, unified_poi_id AS id
+        FROM {table_name}
+        """,
+    )
+else:
+    cursor.execute(
+        "SELECT id FROM information_sources WHERE display_name = %s", (source_type,)
+    )
+    source_id = cursor.fetchone()["id"]
+    cursor.execute(
+        f"""
+        SELECT source_uuid, names_json, elevation_m, NULL AS id
+        FROM {table_name}
+        """,
+    )
 total = 0  # 一致したPOIのカウント
 for row in cursor.fetchall():
     source_uuid = row["source_uuid"]
-    names_json = json.loads(row["names_json"])
-    names = [name for item in names_json if (name := item.get("name"))]
-    if table_name in ["stg_gsi_dm25k_pois", "stg_gsi_vtexp_pois"]:
-        # まず山域名での一致を試みる
-        ids = [id for name in names if (id := mt_ranges.get(name))]
-        if ids:
-            placeholders = ",".join(["%s"] * len(ids))
-            cursor.execute(
-                f"""
-                SELECT
-                    id, representative_name,
-                    ST_Distance_Sphere(representative_geom, geom) AS distance_m
-                FROM unified_pois
-                CROSS JOIN {table_name}
-                WHERE source_uuid = %s AND id IN ({placeholders})
-                ORDER BY distance_m ASC
-                LIMIT 1
-                """,
-                (source_uuid, *ids),
-            )
-            result = cursor.fetchone()
-            if (distance_m := result["distance_m"]) < 5000:
-                id = result["id"]
-                representative_name = result["representative_name"]
-                distance_m = result["distance_m"]
-                print(
-                    f"{names[0]} is a mountain range matched to ID: {id} (distance: {distance_m:.1f} m)"
-                )
-                print("skipping further matching.")
-                continue
-
     if table_name == "stg_book_pois":
-        id = row["id"]
+        source_id = row["source_id"]
+    names_json = json.loads(row["names_json"])
+    names = [item["name"] for item in names_json]
+    if table_name == "stg_book_pois":
+        if not (id := row["id"]):
+            print(f"{names[0]} has no pre-assigned unified_poi_id, skipping.")
+            continue
         if elevation_m := row["elevation_m"]:
             cursor.execute(
                 """
-                SELECT id, representative_name, 0 AS distance_m
-                FROM unified_pois
-                WHERE ABS(elevation_m - %s) <= 20 AND id IN (
-                    SELECT %s
-                    UNION
-                    SELECT parent_id FROM poi_hierarchies WHERE child_id = %s
-                    UNION
-                    SELECT child_id FROM poi_hierarchies WHERE parent_id = %s
-                )
-                """,
-                (elevation_m, id, id, id),
-            )
-        else:
-            cursor.execute(
-                """
-                SELECT id, representative_name, 0 AS distance_m
+                SELECT
+                    id, representative_name,
+                    0 AS distance_m
                 FROM unified_pois
                 WHERE id IN (
                     SELECT %s
                     UNION
+                    SELECT child_id FROM poi_hierarchies WHERE parent_id = %s
+                    UNION
                     SELECT parent_id FROM poi_hierarchies WHERE child_id = %s
+                ) AND ABS(elevation_m - %s) <= 20
+                """,
+                (id, id, id, elevation_m),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT
+                    id, representative_name,
+                    0 AS distance_m
+                FROM unified_pois
+                WHERE id IN (
+                    SELECT %s
                     UNION
                     SELECT child_id FROM poi_hierarchies WHERE parent_id = %s
+                    UNION
+                    SELECT parent_id FROM poi_hierarchies WHERE child_id = %s
                 )
                 """,
                 (id, id, id),
@@ -170,27 +185,27 @@ for row in cursor.fetchall():
         )
     results = cursor.fetchall()
     if not results:
+        print(f"No candidates found for {names[0]}, skipping.")
         continue
     for result in results:
         result["similarity"] = max(
             Levenshtein.jaro_winkler(name, result["representative_name"])
             for name in names
         )
-    sorted_results = sorted(results, key=lambda x: (x["distance_m"], -x["similarity"]))
-    nearest = sorted_results[0]
-    id = nearest["id"]
-    distance_m = nearest["distance_m"]
-    similarity = nearest["similarity"]
-    representative_name = nearest["representative_name"]
-    if table_name == "stg_book_pois" or distance_m < 100 or similarity >= 0.8:
-        if distance_m >= 100 or similarity < 0.8:
-            # print(
-            #    f"Linking {names[0]} to ID: {id} {representative_name} "
-            #    f"(distance: {distance_m:.1f} m, similarity: {similarity:.3f})"
-            # )
-            pass
-        link_pois(id, source_type, source_uuid)
-        total += 1
+    for candidate in sorted(results, key=lambda x: (x["distance_m"], -x["similarity"])):
+        id = candidate["id"]
+        distance_m = candidate["distance_m"]
+        similarity = candidate["similarity"]
+        representative_name = candidate["representative_name"]
+        if (
+            table_name == "stg_book_pois"
+            or distance_m < 100
+            or (distance_m < 500 and similarity >= 0.8)
+            or similarity >= 0.9
+        ):
+            link_pois(id, source_type, source_id, source_uuid, distance_m)
+            total += 1
+            break
 
 print(f"Total linked POIs: {total}")
 
