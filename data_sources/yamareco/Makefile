@@ -1,4 +1,5 @@
 # Makefile for processing geographic data
+.DELETE_ON_ERROR:
 
 SOURCE := yamareco
 TABLE_NAME := stg_$(SOURCE)_pois

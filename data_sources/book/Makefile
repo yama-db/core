@@ -1,4 +1,5 @@
 # Makefile for book data source
+.DELETE_ON_ERROR:
 
 TABLE_NAMES = information_sources digital_service_details book_details
 

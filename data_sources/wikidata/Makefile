@@ -1,4 +1,5 @@
 # Makefile for Wikidata POIs
+.DELETE_ON_ERROR:
 
 TABLE_NAME := stg_wikidata_pois
 

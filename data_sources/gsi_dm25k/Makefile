@@ -1,4 +1,5 @@
 # Makefile for processing geographic data
+.DELETE_ON_ERROR:
 
 TABLE_NAME := stg_gsi_dm25k_pois
 SED_CMD1 := $(shell printf 's/,\uE662牛,/,\uE6EF牛,/')
