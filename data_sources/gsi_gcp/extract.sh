@@ -1,11 +1,9 @@
 #!/opt/local/bin/bash -eu
-# Extract script for GSI GCP data for January 1, 2026
-
-VERSION=20260101
+# Extract script for GSI GCP data
 
 rm -rf work/*
 
-for z in archive/FG-GML-*-ALL1-${VERSION}-*.zip; do
+for z in $(cat FG-GML-file-list.txt); do
     echo Extracting $z
     subdir=$(basename $z .zip)
     unzip -q -d work/$subdir $z
