@@ -33,18 +33,18 @@ def translate_gaiji(name: str, gaiji_flg: str) -> str:
     while pattern[n - j - 2 : n - j] == "_*":
         j += 2
     gaiji_code = mojimoji.zen_to_han(pattern[i : n - j], kana=False)
-    if gaiji_code.startswith("E"):
-        assert gaiji_code in pua, f"未知のPUAコード {gaiji_code} が見つかりました。"
-        gaiji_char = pua[gaiji_code]
+    if gaiji_code == "FA10":  # 塚（旧字）
+        name_modified = name
     else:
-        gaiji_char = chr(int(gaiji_code, 16))
-    m = len(name)
-    name = name[: (i // 2)] + gaiji_char + name[m - (j // 2) :]
-    return name
+        if gaiji_code.startswith("E"):
+            assert gaiji_code in pua, f"未知のPUAコード {gaiji_code} "
+            gaiji_char = pua[gaiji_code]
+        else:
+            gaiji_char = chr(int(gaiji_code, 16))
+        m = len(name)
+        name_modified = name[: (i // 2)] + gaiji_char + name[m - (j // 2) :]
+    return name_modified
 
-
-# 山名中の全角数字は半角数字に変換する
-trans_table = str.maketrans("０１２３４５６７８９", "0123456789")
 
 # 誤記訂正データの読み込み
 with open("raw/gsi_vtexp_corrections.csv", "r", encoding="utf-8-sig") as f:
@@ -100,7 +100,7 @@ def extract_features(file_path, writer):
                         {
                             "source_uuid": uuid if i == 0 else None,
                             "raw_remote_id": raw_remote_id,
-                            "name": name.translate(trans_table),
+                            "name": name,
                             "kana": kana.strip(),
                             "lon": lon,
                             "lat": lat,
