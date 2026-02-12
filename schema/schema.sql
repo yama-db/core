@@ -4,7 +4,7 @@ CREATE TABLE information_sources (
     id INT AUTO_INCREMENT PRIMARY KEY COMMENT '情報源ID',
     source_type ENUM('DIGITAL', 'BOOK', 'JOURNAL') NOT NULL COMMENT '情報源の種別',
     display_name VARCHAR(100) NOT NULL COMMENT '表示用名称',
-    reliability_level TINYINT DEFAULT 5 COMMENT '信頼度順位（0が最高）'
+    reliability_level TINYINT DEFAULT 50 COMMENT '信頼度順位（0が最高）'
 ) COMMENT '情報源マスタテーブル';
 
 CREATE TABLE digital_service_details (
@@ -29,9 +29,11 @@ CREATE TABLE administrative_regions (
     jis_code CHAR(5) COLLATE ascii_bin NOT NULL PRIMARY KEY COMMENT '行政区画コード',
     pref_name VARCHAR(10) NOT NULL COMMENT '都道府県名',
     city_name VARCHAR(50) NOT NULL COMMENT '市区町村名',
+    full_name VARCHAR(60) GENERATED ALWAYS AS (concat(pref_name, city_name)) VIRTUAL COMMENT '検索用完全名称',
     wikidata_qid VARCHAR(20) COLLATE ascii_bin COMMENT 'Wikidata QID',
     pref_code CHAR(2) COLLATE ascii_bin GENERATED ALWAYS AS (LEFT(jis_code, 2)) VIRTUAL COMMENT '都道府県コード',
-    INDEX idx_pref_code (pref_code)
+    INDEX idx_pref_code (pref_code),
+    INDEX idx_full_name (full_name)
 ) COMMENT '行政区画マスタテーブル';
 
 CREATE TABLE administrative_boundaries (
@@ -224,3 +226,10 @@ CREATE TABLE poi_names (
     INDEX idx_source_uuid (source_uuid),
     INDEX idx_name_normalized (name_normalized)
 ) COMMENT 'POI名称テーブル';
+
+CREATE TABLE poi_address_map (
+    unified_poi_id INT NOT NULL COMMENT '統合実体ID',
+    jis_code CHAR(5) COLLATE ascii_bin NOT NULL COMMENT '行政区画コード',
+    PRIMARY KEY (unified_poi_id, jis_code),
+    INDEX idx_jis_code (jis_code)
+) COMMENT 'POIと行政区画コードの紐付けテーブル';
