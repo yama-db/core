@@ -13,6 +13,7 @@ from pathlib import Path
 
 import mysql.connector
 from shared import generate_source_uuid
+from shared import extract_aliases
 
 # コマンドライン引数の解析
 parser = ArgumentParser(description="書籍のCSVファイルをDBに登録")
@@ -74,13 +75,8 @@ with open(csv_file, "r", encoding="utf-8-sig") as f:
     for row in reader:
         raw_remote_id = row["raw_remote_id"]
         uuid = generate_source_uuid(f"NDL{ndl_id}_poi", raw_remote_id)
-        name = row["name"]
-        kana = row["kana"]
-        if m_name := re.fullmatch(r"(.+?)[（\(](.+?)[）\)]", name):
-            name = m_name.group(1).strip()
-        if m_kana := re.fullmatch(r"(.+?)[（\(](.+?)[）\)]", kana):
-            kana = m_kana.group(1).strip()
-        data = [{"name": name, "kana": kana}]
+        aliases = extract_aliases(row["name"], row["kana"])
+        data = [{"name": name, "kana": kana} for name, kana in aliases]
         names_json = json.dumps(data, ensure_ascii=False)
         values.append(
             (
