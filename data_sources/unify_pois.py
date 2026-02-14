@@ -66,12 +66,7 @@ def link_pois(id, source_type, source_id, source_uuid, distance_m):
         (id, source_id, distance_m),
     )
     if existing_link := cursor.fetchone():
-        raw_remote_id = existing_link["raw_remote_id"]
-        name = existing_link["name"]
-        print(
-            f"Skipping link insertion to ID: {id}, already linked to {raw_remote_id} ({name})"
-        )
-        return
+        return existing_link
     try:
         cursor.execute(
             """
@@ -82,6 +77,7 @@ def link_pois(id, source_type, source_id, source_uuid, distance_m):
             (id, source_type, source_id, source_uuid),
         )
         conn.commit()
+        return None
     except mysql.connector.Error as e:
         print(f"MySQL Error during insertion: {e}")
         conn.rollback()
@@ -175,7 +171,7 @@ for row in cursor.fetchall():
                 ST_Distance_Sphere(representative_geom, geom) AS distance_m
             FROM unified_pois
             CROSS JOIN {table_name}
-            WHERE source_uuid = %s AND ST_Within(
+            WHERE source_uuid = %s AND geom IS NOT NULL AND ST_Within(
                 representative_geom,
                 ST_Buffer(geom, %s)
             )
@@ -203,9 +199,14 @@ for row in cursor.fetchall():
             or (distance_m < 500 and similarity >= 0.8)
             or similarity >= 0.9
         ):
-            link_pois(id, source_type, source_id, source_uuid, distance_m)
-            total += 1
-            break
+            if existing_link := link_pois(id, source_type, source_id, source_uuid, distance_m):
+                raw_remote_id = existing_link["raw_remote_id"]
+                name = existing_link["name"]
+                print(f"link insertion '{names[0]}' to ID:{id} '{representative_name}'")
+                print(f"already linked to {raw_remote_id} '{name}', skipping.")
+            else:
+                total += 1
+                break
 
 print(f"Total linked POIs: {total}")
 
