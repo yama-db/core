@@ -26,7 +26,7 @@ def import_poi_names(table_name, source_type):
     if source_type == "BOOK":
         source_id_subquery = "s.source_id"
     else:
-        source_id_subquery = f"(SELECT id FROM information_sources WHERE display_name = '{source_type}' LIMIT 1)"
+        source_id_subquery = f"(SELECT id AS source_id FROM information_sources WHERE display_name = '{source_type}' LIMIT 1)"
 
     try:
         cursor.execute(
@@ -49,7 +49,7 @@ def import_poi_names(table_name, source_type):
                 j.name_text AS name_normalized,
                 j.name_reading,
                 IF(j.idx = 1, 'MAIN', 'ALIAS') AS name_type,
-                FALSE AS is_preferred
+                0 AS is_preferred
             FROM {table_name} AS s
             JOIN poi_links AS p ON s.source_uuid = p.source_uuid
             JOIN JSON_TABLE(
@@ -135,13 +135,26 @@ try:
             cursor.execute(
                 f"""
                 UPDATE poi_names
-                SET is_preferred = CASE WHEN source_id = %s THEN 1 ELSE 0 END
+                SET is_preferred = CASE WHEN source_id = %s AND name_type = 'MAIN' THEN 1 ELSE 0 END
                 WHERE unified_poi_id = %s
                 """,
                 (source_id, unified_poi_id),
             )
-        conn.commit()
+            conn.commit()
 
+    # 優先名称の変更に伴い、unified_poisテーブルのnameとname_readingを更新
+    cursor.execute(
+        """
+        UPDATE unified_pois AS u
+        JOIN poi_names AS p
+            ON u.id = p.unified_poi_id
+            AND p.is_preferred
+        SET
+            u.representative_name = p.name_text,
+            u.representative_kana = p.name_reading
+        """,
+    )
+    conn.commit()
 except mysql.connector.Error as e:
     print(f"MySQL Error during altering preferred names: {e}")
     conn.rollback()
