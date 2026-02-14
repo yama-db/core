@@ -39,6 +39,10 @@ except mysql.connector.Error as e:
     print(f"MySQL Error: {e}")
     sys.exit(1)
 
+cursor.execute("SELECT id FROM information_sources WHERE display_name = %s", (source_type,))
+source_id = cursor.fetchone()["id"]
+print(f"Using source_type: {source_type}, source_id: {source_id}")
+
 # 一時テーブルの作成（POI種別ごとのズームレベル）
 cursor.execute(
     """
@@ -123,10 +127,10 @@ for row in cursor.fetchall():
         )
         cursor.execute(
             """
-            INSERT INTO poi_links (unified_poi_id, source_type, source_uuid)
-            VALUES (%s, %s, %s)
+            INSERT INTO poi_links (unified_poi_id, source_type, source_id, source_uuid)
+            VALUES (%s, %s, %s, %s)
             """,
-            (id, source_type, source_uuid),
+            (id, source_type, source_id, source_uuid),
         )
         conn.commit()
     except mysql.connector.Error as e:
