@@ -6,7 +6,7 @@ TABLE_NAME := stg_$(SOURCE)_pois
 
 all: dist/$(SOURCE).csv
 
-dist/$(SOURCE).csv: archive/$(SOURCE).tsv ../tsv2csv.py
+dist/$(SOURCE).csv: archive/$(SOURCE).tsv ../tsv2csv.py ../../shared/extract_aliases.py
 	python3 ../tsv2csv.py $(SOURCE) $< > $@
 
 archive/$(SOURCE).tsv:

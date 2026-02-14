@@ -12,6 +12,7 @@ from pathlib import Path
 
 import jaconv
 import mysql.connector
+from shared import extract_aliases
 from shared import generate_source_uuid
 
 parser = ArgumentParser(description="YAMAP/YamarecoのTSVファイルを変換してCSV出力")
@@ -86,9 +87,10 @@ try:
 
             raw_remote_id = row["raw_remote_id"]
             row["source_uuid"] = generate_source_uuid(f"{source}_poi", raw_remote_id)
-            row["name"] = name
-            row["kana"] = kana
-            writer.writerow(row)
+            for n, k in extract_aliases(name, kana):
+                row["name"] = n
+                row["kana"] = k
+                writer.writerow(row)
 
 except FileNotFoundError:
     print(f"Error: '{tsv_file}' not found.", file=sys.stderr)
