@@ -15,6 +15,7 @@ trans_table = str.maketrans({
     " ": "",
     "、": "・",
     "　": "・",
+    "/": "／",
 })
 
 def extract_aliases(name, kana):
@@ -24,8 +25,10 @@ def extract_aliases(name, kana):
     if not (regex.findall(r'[^\p{L}\p{N}]', name) or regex.findall(r'[^\p{L}\p{N}]', kana)):
         data.append((name, kana))
         return data
-    m_name = re.fullmatch(r'(.+)[（\(](.+?)[）\)]', name)
-    m_kana = re.fullmatch(r'(.+)[（\(](.+?)[）\)]', kana)
+    name = re.sub(r'／.*$', '', name)
+    kana = re.sub(r'／.*$', '', kana)
+    m_name = re.fullmatch(r'(.+)（(.+?)）', name)
+    m_kana = re.fullmatch(r'(.+)（(.+?)）', kana)
     if m_name and (
         m_name.group(2) in ["東峰", "西峰", "南峰", "北峰", "中央峰", "主峰", "中峰", "南岳", "三角点", "Ⅳ峰"]
         or m_name.group(2).endswith("ピーク")
@@ -89,6 +92,11 @@ def extract_aliases(name, kana):
         for n, k in zip(s_name, s_kana):
             data.append((n, k))
         return data
+    if len(s_name) == 2:
+        if not s_name[0] or "三角点" in s_name[0]:
+            return data
+        data.append((f"{s_name[0]}（{s_name[1]}）", kana))
+        return data
     if len(s_name) == 1:
         for k in s_kana:
             data.append((name, k))
@@ -100,7 +108,7 @@ def extract_aliases(name, kana):
 
 if __name__ == "__main__":
     try:
-        tsv_file = "../data_sources/yamap/archive/yamap.tsv"
+        tsv_file = "../data_sources/yamareco/archive/yamareco.tsv"
         with open(tsv_file, "r", encoding="utf-8-sig") as f:
             reader = csv.DictReader(f, delimiter="\t")
             writer = csv.DictWriter(sys.stdout, fieldnames=["raw_remote_id", "name", "kana"])
