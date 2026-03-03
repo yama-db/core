@@ -83,10 +83,13 @@ with open(data_csv, encoding="utf-8-sig") as f:
             continue
         source_uuid = generate_source_uuid("wikidata_poi", raw_remote_id)
         lat = lon = None
-        if coord := row.get("coord"):
-            if m := re.match(r"Point\(([-\d\.]+) ([-\d\.]+)\)", coord):
-                lon = m.group(1)
-                lat = m.group(2)
+        if not (coord := row.get("coord")):
+            continue
+        if not (m := re.match(r"Point\(([-\d\.]+) ([-\d\.]+)\)", coord)):
+            print(f"Invalid coord format for {raw_remote_id}: {coord}", file=sys.stderr)
+            continue
+        lon = m.group(1)
+        lat = m.group(2)
         elevation_m = row["elevation"] or None
         extract = extracts.get(raw_remote_id, "").replace("\n", "")
         label = itemLabel = row["itemLabel"]
