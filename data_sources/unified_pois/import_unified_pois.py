@@ -10,7 +10,7 @@ import mysql.connector
 
 parser = ArgumentParser(description="統一POIテーブルを初期化")
 parser.add_argument("csv_file", help="ジオメトリ情報を含むCSVファイル")
-parser.add_argument("table_name", help="統一POIテーブル名")
+parser.add_argument("table_name", choices=["unified_pois"], help="統一POIテーブル名")
 parser.add_argument(
     "-t", "--truncate", action="store_true", help="テーブルを空にしてから登録"
 )
@@ -27,6 +27,7 @@ try:
     my_cnf = Path(sys.prefix).parent / ".my.cnf"
     conn = mysql.connector.connect(
         option_files=str(my_cnf),
+        option_groups=["client", "mysql"],
         autocommit=False,
     )
     cursor = conn.cursor(dictionary=True)

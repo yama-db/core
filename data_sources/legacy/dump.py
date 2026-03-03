@@ -13,6 +13,7 @@ try:
     my_cnf = Path(sys.prefix).parent / "legacy.my.cnf"
     conn = mysql.connector.connect(
         option_files=str(my_cnf),
+        option_groups=["client", "mysql"],
         autocommit=False,
     )
     cursor = conn.cursor(dictionary=True)
