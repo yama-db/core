@@ -8,7 +8,7 @@ from pathlib import Path
 
 import mysql.connector
 
-EPS = 40  # 位置の許容誤差[m]
+from shared import config
 
 # コマンドライン引数の解析
 parser = ArgumentParser(description="GSI GCPを統合POIにリンク")
@@ -19,19 +19,27 @@ parser.add_argument(
     "-r",
     "--radius",
     type=int,
-    default=EPS,
-    help=f"バッファの半径[m] (デフォルト: {EPS})",
+    default=config.EPS,
+    help=f"バッファの半径[m] (デフォルト: {config.EPS})",
+)
+parser.add_argument(
+    "-t",
+    "--truncate",
+    action="store_true",
+    help="既存のリンクを削除してから処理を実行 (デフォルト: False)",
 )
 args = parser.parse_args()
 table_name = args.table_name
 source_type = re.sub(r"^stg_|_pois$", "", table_name).upper()
 radius = args.radius
+truncate = args.truncate
 
 # MySQL接続の確立
 try:
     my_cnf = Path(sys.prefix).parent / ".my.cnf"
     conn = mysql.connector.connect(
         option_files=str(my_cnf),
+        option_groups=["client", "mysql"],
         autocommit=False,
     )
     cursor = conn.cursor(dictionary=True)
@@ -68,10 +76,33 @@ cursor.executemany(
 conn.commit()
 
 # 既存のリンクを削除
-cursor.execute("DELETE FROM poi_links WHERE source_type = %s", (source_type,))
-conn.commit()
+if truncate:
+    cursor.execute(
+        "DELETE FROM poi_links WHERE source_type = %s",
+        (source_type,)
+    )
+    conn.commit()
+    print(f"Existing links for {source_type} have been deleted.")
 
-cursor.execute("SELECT id FROM unified_pois ORDER BY id ASC")
+cursor.execute(
+    """
+    SELECT COALESCE(MAX(unified_poi_id), 0) AS max_id
+    FROM poi_links
+    WHERE source_type = %s
+    """,
+    (source_type,),
+)
+max_id = cursor.fetchone()["max_id"]
+print(f"Current max ID linked to {source_type}: {max_id}")
+
+cursor.execute(
+    """
+    SELECT id FROM unified_pois
+    WHERE display_lat != 0 AND display_lon != 0
+        AND id > %s
+    """,
+    (max_id,),
+)
 for row in cursor.fetchall():
     id = row["id"]
     # バッファの作成
@@ -127,10 +158,10 @@ for row in cursor.fetchall():
         )
         cursor.execute(
             """
-            INSERT INTO poi_links (unified_poi_id, source_type, source_id, source_uuid)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO poi_links (unified_poi_id, source_type, source_id, source_uuid, distance_m)
+            VALUES (%s, %s, %s, %s, %s)
             """,
-            (id, source_type, source_id, source_uuid),
+            (id, source_type, source_id, source_uuid, 0),
         )
         conn.commit()
     except mysql.connector.Error as e:

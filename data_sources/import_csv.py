@@ -25,6 +25,7 @@ try:
     my_cnf = Path(sys.prefix).parent / ".my.cnf"
     conn = mysql.connector.connect(
         option_files=str(my_cnf),
+        option_groups=["client", "mysql"],
         autocommit=False,
     )
     cursor = conn.cursor(dictionary=True)
@@ -38,6 +39,7 @@ if truncate:
         cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
         cursor.execute(f"TRUNCATE TABLE {table_name}")
         cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
+        conn.commit()
         print(f"Table {table_name} truncated.")
     except mysql.connector.Error as err:
         print(f"MySQL Error during truncation: {err}")

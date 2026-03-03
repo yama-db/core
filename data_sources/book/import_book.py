@@ -6,7 +6,6 @@
 import csv
 import json
 import os
-import re
 import sys
 from argparse import ArgumentParser
 from pathlib import Path
@@ -38,6 +37,7 @@ try:
     my_cnf = Path(sys.prefix).parent / ".my.cnf"
     conn = mysql.connector.connect(
         option_files=str(my_cnf),
+        option_groups=["client", "mysql"],
         autocommit=False,
     )
     cursor = conn.cursor(dictionary=True)

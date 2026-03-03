@@ -12,6 +12,7 @@ from pathlib import Path
 
 import jaconv
 import mysql.connector
+import regex
 from shared import extract_aliases
 from shared import generate_source_uuid
 
@@ -30,6 +31,7 @@ try:
     my_cnf = Path(sys.prefix).parent / ".my.cnf"
     conn = mysql.connector.connect(
         option_files=str(my_cnf),
+        option_groups=["client", "mysql"],
         autocommit=False,
     )
     cursor = conn.cursor(dictionary=True)
@@ -47,6 +49,7 @@ try:
             name = html.unescape(row["name"].strip())
             if name.startswith("（") and name.endswith("）"):
                 name = name[1:-1]
+            name = regex.sub(r"(\p{Han})ケ(\p{Han})", r"\1ヶ\2", name)
             data = json.loads(row["kana"])
             hira = data.get("hira", "")
             kana = jaconv.kata2hira(hira) if hira else ""
