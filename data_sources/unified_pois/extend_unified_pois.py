@@ -8,7 +8,7 @@ from pathlib import Path
 import Levenshtein
 import mysql.connector
 
-EPS = 100  # 位置の許容誤差[m]
+from shared import config
 
 
 def main():
@@ -18,6 +18,7 @@ def main():
         my_cnf = Path(sys.prefix).parent / ".my.cnf"
         conn = mysql.connector.connect(
             option_files=str(my_cnf),
+            option_groups=["client", "mysql"],
             autocommit=False,
         )
         cursor = conn.cursor(dictionary=True)
@@ -65,7 +66,7 @@ def main():
             )
             LIMIT 1
             """,
-            (source_uuid, EPS)
+            (source_uuid, config.EPS)
         )
         if result := cursor.fetchone():
             id = result["id"]
@@ -90,7 +91,7 @@ def main():
             )
             LIMIT 1
             """,
-            (source_uuid, EPS)
+            (source_uuid, config.EPS)
         )
         if not (result := cursor.fetchone()):
             print(f"No nearby Yamareco POI found for Yamap {raw_remote_id} '{name}', skipping.")

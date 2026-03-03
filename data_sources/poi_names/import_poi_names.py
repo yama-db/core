@@ -7,11 +7,14 @@ from pathlib import Path
 
 import mysql.connector
 
+from shared import config
+
 # MySQL接続の確立
 try:
     my_cnf = Path(sys.prefix).parent / ".my.cnf"
     conn = mysql.connector.connect(
         option_files=str(my_cnf),
+        option_groups=["client", "mysql"],
         autocommit=False,
     )
     cursor = conn.cursor(dictionary=True)
@@ -92,74 +95,70 @@ import_poi_names("stg_book_pois", "BOOK")
 
 # 優先名称の設定
 try:
-    cursor.execute("UPDATE poi_names SET is_preferred = 0")
     cursor.execute(
         """
-        UPDATE poi_names
-        JOIN (
+        CREATE TEMPORARY TABLE min_distances AS
+        SELECT 
+            pl.unified_poi_id, 
+            MIN(pl.distance_m) AS min_distance
+        FROM poi_links AS pl
+        JOIN poi_names AS pn ON pl.source_uuid = pn.source_uuid
+        WHERE pn.name_type = 'MAIN'
+            AND pn.name_reading IS NOT NULL
+            AND pn.name_reading <> ''
+        GROUP BY pl.unified_poi_id
+        """,
+    )
+    cursor.execute("ALTER TABLE min_distances ADD PRIMARY KEY (unified_poi_id)")
+
+    cursor.execute(
+        f"""
+        CREATE TEMPORARY TABLE best_sources AS
+        SELECT 
+            sub.unified_poi_id,
+            sub.source_id
+        FROM (
             SELECT 
-                p.id,
+                pl.unified_poi_id,
+                pl.source_id,
                 ROW_NUMBER() OVER (
-                    PARTITION BY p.unified_poi_id 
-                    ORDER BY 
-                        s.reliability_level ASC, -- 信頼度の高い情報源を優先
-                        p.id ASC                 -- 同じなら登録順
-                ) as name_rank
-            FROM poi_names AS p
-            JOIN information_sources AS s ON p.source_id = s.id
-            WHERE p.name_type = 'MAIN'      -- メイン名称のみ対象
-            AND p.name_reading IS NOT NULL  -- 読みがあるものを優先
-            AND p.name_reading <> ''
-        ) AS ranked_names ON poi_names.id = ranked_names.id
-        SET poi_names.is_preferred = 1
-        WHERE ranked_names.name_rank = 1
+                    PARTITION BY pl.unified_poi_id 
+                    ORDER BY isrc.reliability_level
+                ) as rank_idx
+            FROM poi_links AS pl
+            JOIN poi_names AS pn ON pl.source_uuid = pn.source_uuid
+            JOIN information_sources AS isrc ON pl.source_id = isrc.id
+            JOIN min_distances AS md ON pl.unified_poi_id = md.unified_poi_id
+            WHERE pn.name_type = 'MAIN'
+                AND pn.name_reading IS NOT NULL
+                AND pn.name_reading <> ''
+                AND pl.distance_m <= GREATEST({config.EPS}, md.min_distance)
+        ) AS sub
+        WHERE sub.rank_idx = 1
+        """,
+    )
+    cursor.execute("ALTER TABLE best_sources ADD PRIMARY KEY (unified_poi_id)")
+
+    cursor.execute(
+        """
+        UPDATE poi_names AS pn
+        JOIN poi_links AS pl ON pn.source_uuid = pl.source_uuid
+        JOIN unified_pois AS u ON pl.unified_poi_id = u.id
+        LEFT JOIN best_sources AS bs ON pl.unified_poi_id = bs.unified_poi_id
+        SET pn.is_preferred = CASE 
+            WHEN bs.source_id IS NOT NULL
+                AND pl.source_id = bs.source_id
+                AND pn.name_type = 'MAIN'
+            THEN 1 ELSE 0 
+        END
+        WHERE u.display_lat != 0 AND u.display_lon != 0
         """,
     )
     conn.commit()
+
 except mysql.connector.Error as e:
     print(f"MySQL Error during preferred name update: {e}")
     conn.rollback()
-    sys.exit(1)
-
-# 手動での優先名称修正の適用
-try:
-    with open("raw/preferred.csv", "r", encoding="utf-8-sig") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            unified_poi_id = row["unified_poi_id"]
-            name = row["name"]
-            source_id = row["source_id"]
-            print(
-                f"Setting preferred for ID {unified_poi_id} ({name}) to source ID {source_id}."
-            )
-            cursor.execute(
-                f"""
-                UPDATE poi_names
-                SET is_preferred = CASE WHEN source_id = %s AND name_type = 'MAIN' THEN 1 ELSE 0 END
-                WHERE unified_poi_id = %s
-                """,
-                (source_id, unified_poi_id),
-            )
-            conn.commit()
-
-    # 優先名称の変更に伴い、unified_poisテーブルのnameとname_readingを更新
-    cursor.execute(
-        """
-        UPDATE unified_pois AS u
-        JOIN poi_names AS p
-            ON u.id = p.unified_poi_id
-            AND p.is_preferred
-        SET
-            u.representative_name = p.name_text,
-            u.representative_kana = p.name_reading
-        """,
-    )
-    conn.commit()
-except mysql.connector.Error as e:
-    print(f"MySQL Error during altering preferred names: {e}")
-    conn.rollback()
-except FileNotFoundError:
-    print("No preferred names corrections found.")
 finally:
     cursor.close()
     conn.close()

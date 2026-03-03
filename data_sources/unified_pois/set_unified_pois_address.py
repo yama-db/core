@@ -8,7 +8,7 @@ from pathlib import Path
 
 import mysql.connector
 
-EPS = 40  # 位置の許容誤差[m]
+from shared import config
 
 parser = ArgumentParser(description="Unified POI住所情報設定スクリプト")
 parser.add_argument("table_name", choices=["poi_address_map"], help="対象テーブル名")
@@ -24,6 +24,7 @@ try:
     my_cnf = Path(sys.prefix).parent / ".my.cnf"
     conn = mysql.connector.connect(
         option_files=str(my_cnf),
+        option_groups=["client", "mysql"],
         autocommit=False,
     )
     cursor = conn.cursor(dictionary=True)
@@ -40,12 +41,19 @@ if truncate:
         print(f"MySQL Error during truncate: {e}")
         sys.exit(1)
 
-cursor.execute(
-    "SELECT id FROM unified_pois WHERE display_lat != 0 AND display_lon != 0"
-)
 address_text_data = []
 jis_code_data = []
 count = 0
+
+cursor.execute(
+    """
+    SELECT u.id
+    FROM unified_pois AS u
+    LEFT JOIN poi_address_map AS p ON u.id = p.unified_poi_id
+    WHERE u.display_lat != 0 AND u.display_lon != 0
+        AND p.unified_poi_id IS NULL
+    """,
+)
 for row in cursor.fetchall():
     id = row["id"]
     cursor.execute(
@@ -62,7 +70,7 @@ for row in cursor.fetchall():
             ORDER BY r.jis_code
         ) AS t
         """,
-        (EPS, id),
+        (config.EPS, id),
     )
     result = cursor.fetchone()
     if result:
