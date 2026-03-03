@@ -55,7 +55,7 @@ CREATE TABLE stg_gsi_dm25k_pois (
     raw_remote_id VARCHAR(100) COLLATE ascii_bin COMMENT '元データのID',
     names_json JSON COMMENT '名称配列',
     geom POINT NOT NULL /*!80003 SRID 4326 */ COMMENT '地理位置',
-    elevation_m DECIMAL(6, 1) COMMENT '標高（推定）',
+    elevation_m DECIMAL(7, 2) COMMENT '標高（推定）',
     -- 個別の属性
     poi_type_raw VARCHAR(50) COMMENT '大分類-中分類-小分類',
     last_updated_at DATETIME COMMENT 'データ更新日',
@@ -116,12 +116,13 @@ CREATE TABLE stg_wikidata_pois (
     source_uuid BINARY(16) PRIMARY KEY COMMENT 'UUID v5',
     raw_remote_id VARCHAR(100) COLLATE ascii_bin COMMENT 'Wikidata QID',
     names_json JSON COMMENT '名称配列',
-    geom POINT /*!80003 SRID 4326 */ COMMENT '地理位置',
+    geom POINT NOT NULL /*!80003 SRID 4326 */ COMMENT '地理位置',
     elevation_m DECIMAL(6, 1) COMMENT '標高',
     -- 個別の属性
     poi_type_raw VARCHAR(50) COMMENT '元データの種別名',
     page_url VARCHAR(255) COLLATE ascii_bin COMMENT 'WebページURL',
-    last_updated_at DATETIME COMMENT 'データ更新日'
+    last_updated_at DATETIME COMMENT 'データ更新日',
+    SPATIAL INDEX(geom)
 ) COMMENT 'Wikidata POIデータ';
 
 CREATE TABLE stg_legacy_pois (
@@ -157,9 +158,9 @@ CREATE TABLE unified_pois (
     representative_name VARCHAR(255) COLLATE utf8mb4_bin COMMENT '代表名称(異体字保持)',
     representative_kana VARCHAR(255) COMMENT '代表名称読み仮名',
     representative_geom POINT NOT NULL /*!80003 SRID 4326 */ COMMENT '代表座標',
-    display_lat DECIMAL(10, 7) GENERATED ALWAYS AS (ST_Latitude(representative_geom)) VIRTUAL COMMENT '緯度',
-    display_lon DECIMAL(11, 7) GENERATED ALWAYS AS (ST_Longitude(representative_geom)) VIRTUAL COMMENT '経度',
-    elevation_m DECIMAL(6, 1) COMMENT '代表標高',
+    display_lat DECIMAL(9, 6) GENERATED ALWAYS AS (ST_Latitude(representative_geom)) VIRTUAL COMMENT '緯度',
+    display_lon DECIMAL(10, 6) GENERATED ALWAYS AS (ST_Longitude(representative_geom)) VIRTUAL COMMENT '経度',
+    elevation_m DECIMAL(7, 2) COMMENT '代表標高',
     address_text VARCHAR(255) COMMENT '表示用所在地',
     min_zoom_level TINYINT NOT NULL DEFAULT 13 COMMENT '表示開始ズームレベル',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '作成日時',
@@ -183,6 +184,7 @@ CREATE TABLE poi_links (
     ) NOT NULL COMMENT '参照先テーブル種別',
     source_id INT NOT NULL COMMENT '情報源ID',
     source_uuid BINARY(16) NOT NULL COMMENT '情報源UUID',
+    distance_m FLOAT NOT NULL COMMENT '位置の距離',
     PRIMARY KEY (unified_poi_id, source_uuid),
     UNIQUE INDEX uq_poi_source_id (unified_poi_id, source_id),
     FOREIGN KEY (unified_poi_id) REFERENCES unified_pois(id),
