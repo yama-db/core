@@ -8,6 +8,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 
 import mojimoji
+import regex
 from shared import generate_source_uuid
 
 # 外字・環境依存文字リスト
@@ -82,6 +83,8 @@ def extract_features(file_path, writer):
                 gaijiFlg = properties["gaijiFlg"] or "0"
                 if gaijiFlg != "0":
                     name = translate_gaiji(name, gaijiFlg)
+                name = name.replace("塚", "塚")
+                name = regex.sub(r'(\p{Han})ケ(\p{Han})', r'\1ヶ\2', name)
                 kana = properties["kana"]
                 raw_remote_id = f"{x}-{y}-{index}"
                 if raw_remote_id in corrections:

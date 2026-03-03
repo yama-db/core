@@ -53,6 +53,7 @@ def main():
             alias_flag = True
         if name.endswith(("尾根", "山脈", "山地")):
             continue
+        name = regex.sub(r"(\p{Han})ケ(\p{Han})", r"\1ヶ\2", name)
         kana = row["注記文字の読み"]
         if kana.startswith("（") and kana.endswith("）"):
             kana = kana[1:-1]
