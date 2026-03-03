@@ -21,7 +21,7 @@ import: private/gsi_dm25k.csv
 	python3 import_aliases.py $< $(TABLE_NAME)
 
 unify:
-	python3 ../unify_pois.py $(TABLE_NAME)
+	python3 ../unify_pois.py --truncate $(TABLE_NAME)
 
 clean: ;
 

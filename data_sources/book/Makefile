@@ -15,7 +15,7 @@ import:
 	done
 
 unify:
-	python3 ../unify_pois.py stg_book_pois
+	python3 ../unify_pois.py --truncate stg_book_pois
 
 clean: ;
 

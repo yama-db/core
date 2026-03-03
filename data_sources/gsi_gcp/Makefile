@@ -17,7 +17,7 @@ import: dist/gsi_gcp.csv
 	python3 ../import_pois.py --truncate $< $(TABLE_NAME)
 
 unify:
-	python3 unify_gcp.py $(TABLE_NAME)
+	python3 unify_gcp.py --truncate $(TABLE_NAME)
 
 clean:
 	rm -rf work/.extracted work/*
