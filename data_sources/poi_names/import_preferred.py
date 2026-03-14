@@ -33,18 +33,24 @@ except mysql.connector.Error as e:
 for row in rows:
     unified_poi_id = row["unified_poi_id"]
     name = row["name"]
-    source_id = row["source_id"]
+    display_name = row["display_name"]
     print(
-        f"Setting preferred for ID {unified_poi_id} '{name}' to source ID {source_id}."
+        f"Setting preferred for ID {unified_poi_id} '{name}' to display name '{display_name}'."
     )
     try:
         cursor.execute(
             f"""
-            UPDATE poi_names
-            SET is_preferred = CASE WHEN source_id = %s AND name_type = 'MAIN' THEN 1 ELSE 0 END
-            WHERE unified_poi_id = %s
+            UPDATE poi_names AS p
+            JOIN information_sources AS s ON p.source_id = s.id
+            SET p.is_preferred = (
+                CASE
+                    WHEN s.display_name = %s AND p.name_type = 'MAIN' THEN 1
+                    ELSE 0
+                END
+            )
+            WHERE p.unified_poi_id = %s
             """,
-            (source_id, unified_poi_id),
+            (display_name, unified_poi_id),
         )
         conn.commit()
     except mysql.connector.Error as e:
