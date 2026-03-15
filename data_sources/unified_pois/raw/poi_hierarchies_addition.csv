@@ -6,3 +6,5 @@ parent_id,parent_name,child_id,child_name,relation_type
 396,富士山,19705,朝日岳,MEMBER
 396,富士山,19336,駒ヶ岳,MEMBER
 396,富士山,20923,三島岳,MEMBER
+450,八ヶ岳,20241,中岳,MEMBER
+979,釈迦岳,20769,本釈迦,MEMBER
