@@ -10,7 +10,6 @@ import Levenshtein
 import regex
 
 trans_table = str.maketrans({
-    "(": "（",
     ")": "）",
     " ": "",
     "、": "・",
@@ -20,6 +19,7 @@ trans_table = str.maketrans({
 
 def extract_aliases(name, kana):
     data = []
+    name = re.sub(r'\s*[\(（]', '（', name)
     name = name.translate(trans_table)
     kana = kana.translate(trans_table)
     if not (regex.findall(r'[^\p{L}\p{N}]', name) or regex.findall(r'[^\p{L}\p{N}]', kana)):
