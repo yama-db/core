@@ -3,7 +3,7 @@
 CREATE TABLE information_sources (
     id INT AUTO_INCREMENT PRIMARY KEY COMMENT '情報源ID',
     source_type ENUM('DIGITAL', 'BOOK', 'JOURNAL') NOT NULL COMMENT '情報源の種別',
-    display_name VARCHAR(100) NOT NULL COMMENT '表示用名称',
+    display_name VARCHAR(100) NOT NULL UNIQUE COMMENT '表示用名称',
     reliability_level TINYINT DEFAULT 50 COMMENT '信頼度順位（0が最高）'
 ) COMMENT '情報源マスタテーブル';
 
