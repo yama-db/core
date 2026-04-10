@@ -94,12 +94,8 @@ for row in cursor.fetchall():
     if table_name == "stg_book_pois":
         # idを使って直接リンクを作成する
         source_id = row["source_id"]
-        id = row["id"]
-        # 標高がある場合は20m以内、ない場合はNULL同士でマッチさせる
-        if elevation_m is not None:
-            cond_elevation = "ABS(u.elevation_m - %s) < 20"
-        else:
-            cond_elevation = "%s IS NULL"
+        if (id := row["id"]) is None:
+            continue
         # 親POIがあり、名称が一致する場合はリンク対象外
         cursor.execute(
             f"""
@@ -112,10 +108,18 @@ for row in cursor.fetchall():
             WHERE u.display_lat != 0 AND u.display_lon != 0
                 AND u.id = %s
                 AND NOT (h.child_id IS NOT NULL AND h.parent_name = %s)
-                AND {cond_elevation}
             """,
-            (id, name, elevation_m),
+            (id, name),
         )
+        if not (pois := cursor.fetchall()):
+            print(f"Skipping {raw_remote_id} '{name}': unified POI {id} not found.")
+            continue
+        poi = pois[0]
+        ele = poi["elevation_m"]
+        if elevation_m is not None and abs(elevation_m - ele) > 20:
+            print(f"Skipping {raw_remote_id} '{name}': unified POI {id} not matched by elevation.")
+            print(f"  Source: {elevation_m:.0f}m, Unified POI: {ele:.0f}m")
+            continue
     else:
         # stg_book_pois以外は距離で絞り込み、標高が最高となる統合POIを検索
         cursor.execute(
@@ -139,13 +143,13 @@ for row in cursor.fetchall():
             """,
             (RADIUS, name),
         )
-    if not (pois := cursor.fetchall()):
-        print(f"Skipping {raw_remote_id} '{name}': no matching unified POI found.")
-        continue
-    if len(pois) == 1 or pois[0]["distance_m"] < EPS:
-        poi = pois[0]
-    else:
-        poi = max(pois, key=lambda x: x["elevation_m"])
+        if not (pois := cursor.fetchall()):
+            print(f"Skipping {raw_remote_id} '{name}': unified POI not found within {RADIUS}m.")
+            continue
+        if len(pois) == 1 or pois[0]["distance_m"] < EPS:
+            poi = pois[0]
+        else:
+            poi = max(pois, key=lambda x: x["elevation_m"])
 
     unified_poi_id = poi["unified_poi_id"]
     distance_m = poi["distance_m"]
