@@ -11,22 +11,22 @@ from argparse import ArgumentParser
 from pathlib import Path
 
 import mysql.connector
-from shared import generate_source_uuid
-from shared import extract_aliases
+
+from shared import extract_aliases, generate_source_uuid
 
 # コマンドライン引数の解析
 parser = ArgumentParser(description="書籍のCSVファイルをDBに登録")
+parser.add_argument("table_name", help="登録先テーブル名")
 parser.add_argument("source_id", help="情報源ID")
 parser.add_argument("csv_file", help="書籍のCSVファイル・パス")
 parser.add_argument(
     "-t", "--truncate", action="store_true", help="登録前にテーブルを空にする"
 )
 args = parser.parse_args()
+table_name = args.table_name
 source_id = int(args.source_id)
 csv_file = args.csv_file
 truncate = args.truncate
-
-table_name = "stg_book_pois"
 
 if os.path.isfile(csv_file) and os.path.getsize(csv_file) == 0:
     print(f"空のファイルのため処理をスキップします: {csv_file}")
@@ -37,7 +37,7 @@ try:
     my_cnf = Path(sys.prefix).parent / ".my.cnf"
     conn = mysql.connector.connect(
         option_files=str(my_cnf),
-        option_groups=["client", "mysql"],
+        option_groups=["client"],
         autocommit=False,
     )
     cursor = conn.cursor(dictionary=True)
@@ -47,16 +47,19 @@ except mysql.connector.Error as e:
 
 # 情報源の正式名称とNDL書誌IDを取得
 cursor.execute(
-    "SELECT formal_title, ndl_id FROM book_details WHERE source_id = %s",
+    "SELECT info_type, display_name, ndl_id FROM information_sources WHERE id = %s",
     (source_id,),
 )
 result = cursor.fetchone()
 if not result:
     print(f"No book found with source_id {source_id}")
     sys.exit(1)
-formal_title = result["formal_title"]
+if result["info_type"] != "BOOK":
+    print(f"Source ID {source_id} is not a BOOK type")
+    sys.exit(1)
+display_name = result["display_name"]
 ndl_id = result["ndl_id"]
-print(f"Processing book: {formal_title} (NDL{ndl_id})")
+print(f"Processing book: {display_name} (NDL{ndl_id})")
 
 # 指定された情報源IDのデータを削除
 if truncate:
@@ -73,19 +76,21 @@ with open(csv_file, "r", encoding="utf-8-sig") as f:
     reader = csv.DictReader(f)
     values = []
     for row in reader:
-        raw_remote_id = row["raw_remote_id"]
-        uuid = generate_source_uuid(f"NDL{ndl_id}_poi", raw_remote_id)
+        raw_id = row["raw_id"]
+        raw_type = "山"  # FIXME:書籍のPOIはすべて山として扱う
+        uuid = generate_source_uuid(f"NDL{ndl_id}_poi", raw_id)
         aliases = extract_aliases(row["name"], row["kana"])
         data = [{"name": name, "kana": kana} for name, kana in aliases]
         names_json = json.dumps(data, ensure_ascii=False)
         values.append(
             (
                 uuid.bytes,
-                raw_remote_id,
-                names_json,
-                row["elevation_m"] or None,
                 source_id,
-                row["unified_poi_id"] or None,
+                raw_id,
+                raw_type,
+                row["mountain_id"] or None,
+                names_json,
+                row["elevation"] or None,
             )
         )
 
@@ -94,9 +99,9 @@ try:
     cursor.executemany(
         f"""
         INSERT INTO {table_name} (
-            source_uuid, raw_remote_id, names_json, elevation_m, source_id, unified_poi_id
+            source_uuid, source_id, raw_id, raw_type, mountain_id, names_json, elevation
         ) VALUES (
-            %s, %s, %s, %s, %s, %s
+            %s, %s, %s, %s, %s, %s, %s
         )
         """,
         values,

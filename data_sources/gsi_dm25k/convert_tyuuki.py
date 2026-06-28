@@ -4,9 +4,11 @@
 import csv
 import re
 import sys
+from argparse import ArgumentParser
 
 import regex
 from convert_pua import convert_pua
+
 from shared import generate_source_uuid
 
 
@@ -20,16 +22,21 @@ def dms2deg(dms_str: str) -> float:
 
 
 def main():
+    parser = ArgumentParser()
+    parser.add_argument("--aliases", action="store_true")
+    args = parser.parse_args()
+    aliases_only = args.aliases
+
     reader = csv.DictReader(sys.stdin)
     header = [
-        "source_uuid",
-        "raw_remote_id",
+        "raw_id",
+        "raw_type",
         "name",
         "kana",
         "lat",
         "lon",
-        "elevation_m",
-        "poi_type_raw",
+        "elevation",
+        "z_min",
         "last_updated_at",
     ]
     writer = csv.DictWriter(sys.stdout, fieldnames=header)
@@ -38,12 +45,12 @@ def main():
         cat1 = int(row["大分類コード"])
         cat2 = int(row["中分類コード"])
         cat3 = int(row["小分類コード"])
-        poi_type_raw = f"{cat1}-{cat2}-{cat3}"
-        if poi_type_raw != "3-1-2":
+        raw_type = f"{cat1}-{cat2}-{cat3}"
+        if raw_type != "3-1-2":
             continue  # 山のみ処理
         code = int(row["1/25_000地形図コード"])
         seq = int(row["注記番号"])
-        raw_remote_id = f"{code}-{seq}"
+        raw_id = f"{code}-{seq}"
         lat = dms2deg(row["注記代表点緯度"])
         lon = dms2deg(row["注記代表点経度"])
         name = convert_pua(row["注記文字"])
@@ -58,22 +65,19 @@ def main():
         if kana.startswith("（") and kana.endswith("）"):
             kana = kana[1:-1]
             assert alias_flag, "Alias flag mismatch"
-        uuid = (
-            generate_source_uuid("gsi_dm25k_poi", raw_remote_id)
-            if not alias_flag
-            else ""
-        )
+        if alias_flag ^ aliases_only:
+            continue
         writer.writerow(
             {
-                "source_uuid": uuid,
-                "raw_remote_id": raw_remote_id,
+                "raw_id": raw_id,
+                "raw_type": raw_type,
                 "name": name,
                 "kana": kana,
                 "lat": lat,
                 "lon": lon,
-                "elevation_m": "",
-                "poi_type_raw": poi_type_raw,
-                "last_updated_at": "",
+                "elevation": None,
+                "z_min": None,
+                "last_updated_at": None,
             }
         )
 

@@ -7,24 +7,33 @@ import csv
 import sys
 from xml.etree import ElementTree as ET
 
-from shared import generate_source_uuid
-
 namespaces = {
     "gml": "http://www.opengis.net/gml/3.2",
     "": "http://fgd.gsi.go.jp/spec/2008/FGD_GMLSchema",
 }
 
 header = [
-    "source_uuid",
-    "raw_remote_id",
+    "raw_id",
+    "raw_type",
     "name",
     "kana",
     "lat",
     "lon",
-    "elevation_m",
-    "poi_type_raw",
+    "elevation",
+    "z_min",
     "last_updated_at",
 ]
+
+z_min_mapping = {
+    "電子基準点": 8,
+    "一等三角点": 8,
+    "二等三角点": 9,
+    "三等三角点": 10,
+    "四等三角点": 11,
+    "経緯度原点": 11,
+    "地殻変動観測点": 11,
+    "標高点": 12,
+}
 
 writer = csv.DictWriter(sys.stdout, fieldnames=header)
 writer.writeheader()
@@ -34,39 +43,47 @@ for f in sys.argv[1:]:
     root = tree.getroot()
     for tag in ["GCP", "ElevPt"]:
         for pt in root.findall(tag, namespaces):
-            t = pt.find("type", namespaces).text  # 種別
+            t = pt.find("type", namespaces).text
             if t == "電子基準点":
-                name = pt.find("name", namespaces).text  # 点名称
+                name = pt.find("name", namespaces).text
                 if not name.endswith("（付）"):
                     continue
-                poi_type_raw = t
+                raw_type = t
             elif t == "三角点":
-                name = pt.find("name", namespaces).text  # 点名称
-                poi_type_raw = pt.find("gcpClass", namespaces).text
+                name = pt.find("name", namespaces).text
+                raw_type = pt.find("gcpClass", namespaces).text
             elif t == "標高点（測点）":
                 name = ""
-                poi_type_raw = "標高点"
-            else:
+                raw_type = "標高点"
+            elif t == "水準点" or t == "多角点":
                 continue
-            raw_remote_id = pt.find("fid", namespaces).text  # 基盤地図情報レコードID
-            uuid = generate_source_uuid("gsi_gcp_poi", raw_remote_id)
-            lat, lon = pt.find(
-                "pos/gml:Point/gml:pos", namespaces
-            ).text.split()  # 緯度, 経度
-            elevation_m = getattr(pt.find("alti", namespaces), "text", "")  # 標高
-            last_update_at = pt.find(
-                "devDate/gml:timePosition", namespaces
-            ).text  # 整備完了日
+            elif t == "その他の国家基準点":
+                name = pt.find("name", namespaces).text
+                raw_type = pt.find("gcpClass", namespaces).text
+            else:
+                print(f"Warning: unknown type '{t}' is skipped", file=sys.stderr)
+                continue
+            raw_id = pt.find("fid", namespaces).text
+            lat, lon = pt.find("pos/gml:Point/gml:pos", namespaces).text.split()
+            z_min = z_min_mapping.get(raw_type, 13)
+            elevation = getattr(pt.find("alti", namespaces), "text", "")
+            if elevation is None or elevation == "":
+                print(
+                    f"Warning: elevation is not defined for {name}（{raw_type}）",
+                    file=sys.stderr,
+                )
+                continue
+            last_update_at = pt.find("devDate/gml:timePosition", namespaces).text
             writer.writerow(
                 {
-                    "source_uuid": uuid,
-                    "raw_remote_id": raw_remote_id,
+                    "raw_id": raw_id,
+                    "raw_type": raw_type,
                     "name": name,
-                    "kana": "",
+                    "kana": None,
                     "lat": lat,
                     "lon": lon,
-                    "elevation_m": elevation_m,
-                    "poi_type_raw": poi_type_raw,
+                    "elevation": elevation,
+                    "z_min": z_min,
                     "last_updated_at": last_update_at,
                 }
             )

@@ -14,7 +14,7 @@ archive/$(SOURCE).tsv:
 	@exit 1
 
 import: dist/$(SOURCE).csv
-	python3 ../import_pois.py --truncate $< $(TABLE_NAME)
+	python3 ../import_pois.py --truncate $(TABLE_NAME) $<
 
 unify:
 	python3 ../unify_pois.py --truncate $(TABLE_NAME)

@@ -1,4 +1,4 @@
-﻿raw_remote_id,name,kana,elevation_m,unified_poi_id,description_text
+raw_id,name,kana,elevation,mountain_id,description
 1,岩手山,いわてさん,2038.2,171,
 2,姥倉山,うばくらやま,1517.3,6054,
 3,鎌倉森,かまくらもり,1316.9,5987,

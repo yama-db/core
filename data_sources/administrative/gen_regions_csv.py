@@ -46,11 +46,19 @@ ksj["city"] = ksj["city"].str.replace("nan", "")
 merged_ksj = pandas.merge(ksj, wd, on="code", how="left")
 # codeを5桁の文字列に変換する
 merged_ksj["code"] = merged_ksj["code"].map("{:05d}".format)
+# 都道府県のQIDを取得するために、都道府県のコードを抽出する
+merged_ksj["pref_code"] = merged_ksj["code"].str[:2]
+# 都道府県のQIDを取得するために、都道府県のQIDを抽出する
+pref_qid_map = (
+    merged_ksj[merged_ksj["city"] == ""].set_index("pref_code")["qid"].to_dict()
+)
+# 都道府県のQIDを結合する
+merged_ksj["pref_qid"] = merged_ksj["pref_code"].map(pref_qid_map)
 
 merged_ksj.to_csv(
     sys.stdout,
     index=False,
-    header=["jis_code", "pref_name", "city_name", "wikidata_qid"],
+    header=["jis_code", "pref_name", "city_name", "city_qid", "pref_qid"],
     quoting=csv.QUOTE_NONNUMERIC,
-    columns=["code", "prefecture", "city", "qid"],
+    columns=["code", "prefecture", "city", "qid", "pref_qid"],
 )

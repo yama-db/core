@@ -1,4 +1,4 @@
-raw_remote_id,name,kana,elevation_m,unified_poi_id,description_text
+raw_id,name,kana,elevation,mountain_id,description
 1,朝日岳,あさひだけ,1896,3332,
 2,半月山,はんげつやま,1753,3104,
 3,丸山,まるやま,1689,3179,

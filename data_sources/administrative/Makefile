@@ -26,8 +26,8 @@ raw/N03-$(REVISION)_GML.zip:
 	@exit 1
 
 import: dist/regions.csv work/N03-$(REVISION).geojson
-	python3 ../import_csv.py --truncate dist/regions.csv $(TABLE_REGIONS)
-	python3 import_boundaries.py --truncate work/N03-$(REVISION).geojson $(TABLE_BOUNDARIES)
+	python3 ../import_csv.py --truncate $(TABLE_REGIONS) dist/regions.csv
+	python3 import_boundaries.py --truncate $(TABLE_BOUNDARIES) work/N03-$(REVISION).geojson
 
 unify: ;
 

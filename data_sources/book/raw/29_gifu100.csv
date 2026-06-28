@@ -1,6 +1,6 @@
-﻿raw_remote_id,name,kana,elevation_m,unified_poi_id,description_text
+raw_id,name,kana,elevation,mountain_id,description
 1,伊吹山,いぶきやま,1377,707,
-2,三国岳,みくにだけ,815,11126,
+2,三国岳,みくにだけ,815,28715,
 3,養老山,ようろうさん,859,710,
 4,池田山,いけだやま,924,9317,
 5,小島山,おじまやま,864,9316,

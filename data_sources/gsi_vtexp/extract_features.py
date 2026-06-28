@@ -9,7 +9,6 @@ from pathlib import Path
 
 import mojimoji
 import regex
-from shared import generate_source_uuid
 
 # 外字・環境依存文字リスト
 # https://www.gsi.go.jp/common/000255942.pdf
@@ -51,7 +50,7 @@ def translate_gaiji(name: str, gaiji_flg: str) -> str:
 with open("raw/gsi_vtexp_corrections.csv", "r", encoding="utf-8-sig") as f:
     reader = csv.DictReader(f)
     corrections = {
-        row["raw_remote_id"]: {
+        row["raw_id"]: {
             "name": row["name"],
             "kana": row["kana"],
             "name_fixed": row["name_fixed"],
@@ -74,8 +73,8 @@ def extract_features(file_path, writer):
                 coordinates = geometry["coordinates"]
                 lon, lat = coordinates if len(coordinates) == 2 else (None, None)
                 properties = feature["properties"]
-                poi_type_raw = properties["type"]
-                if poi_type_raw != "山":
+                raw_type = properties["type"]
+                if raw_type != "山":
                     continue
                 name = properties["name"]
                 if name.endswith(("尾根", "山脈", "山地")):
@@ -84,31 +83,30 @@ def extract_features(file_path, writer):
                 if gaijiFlg != "0":
                     name = translate_gaiji(name, gaijiFlg)
                 name = name.replace("塚", "塚")
-                name = regex.sub(r'(\p{Han})ケ(\p{Han})', r'\1ヶ\2', name)
+                name = regex.sub(r"(\p{Han})ケ(\p{Han})", r"\1ヶ\2", name)
                 kana = properties["kana"]
-                raw_remote_id = f"{x}-{y}-{index}"
-                if raw_remote_id in corrections:
-                    corr = corrections[raw_remote_id]
+                raw_id = f"{x}-{y}-{index}"
+                if raw_id in corrections:
+                    corr = corrections[raw_id]
                     assert (
                         name == corr["name"]
-                    ), f"名前の不一致: {name} != {corr['name']} ({raw_remote_id})"
+                    ), f"名前の不一致: {name} != {corr['name']} ({raw_id})"
                     assert (
                         kana == corr["kana"]
-                    ), f"かなの不一致: {kana} != {corr['kana']} ({raw_remote_id})"
+                    ), f"かなの不一致: {kana} != {corr['kana']} ({raw_id})"
                     name = corr["name_fixed"]
                     kana = corr["kana_fixed"]
-                uuid = generate_source_uuid("gsi_vtexp_poi", raw_remote_id)
                 for i, kana in enumerate(properties["kana"].split(",")):
                     writer.writerow(
                         {
-                            "source_uuid": uuid if i == 0 else None,
-                            "raw_remote_id": raw_remote_id,
+                            "raw_id": raw_id,
+                            "raw_type": raw_type,
                             "name": name,
                             "kana": kana.strip(),
                             "lon": lon,
                             "lat": lat,
-                            "elevation_m": None,
-                            "poi_type_raw": poi_type_raw,
+                            "elevation": None,
+                            "z_min": None,
                             "last_updated_at": properties["lfSpanFr"] or None,
                         }
                     )
@@ -138,13 +136,14 @@ if __name__ == "__main__":
 
     fieldnames = [
         "source_uuid",
-        "raw_remote_id",
+        "raw_id",
+        "raw_type",
         "name",
         "kana",
-        "lon",
         "lat",
-        "elevation_m",
-        "poi_type_raw",
+        "lon",
+        "elevation",
+        "z_min",
         "last_updated_at",
     ]
     writer = csv.DictWriter(sys.stdout, fieldnames=fieldnames)

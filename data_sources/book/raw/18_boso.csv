@@ -1,4 +1,4 @@
-raw_remote_id,name,kana,elevation_m,unified_poi_id,description_text
+raw_id,name,kana,elevation,mountain_id,description
 1,八丁山,はっちょうやま,,22511,
 2,国界三郡山,こっかいみごおりやま,,22512,
 3,請雨山,しょううさん,,22513,

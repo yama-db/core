@@ -1,4 +1,4 @@
-raw_remote_id,name,kana,elevation_m,unified_poi_id,description_text
+raw_id,name,kana,elevation,mountain_id,description
 206,唐木山,からきやま,599.7,16284,
 207,白石山,しらいしやま,391,15388,
 208,烏岳,からすだけ,376.8,28415,

@@ -1,4 +1,4 @@
-raw_remote_id,name,kana,elevation_m,unified_poi_id,description_text
+raw_id,name,kana,elevation,mountain_id,description
 1,大船山,たいせんざん,1787,969,
 2,北大船,きたたいせん,1706,28551,
 3,立中山,たっちゅうさん,1468,19949,

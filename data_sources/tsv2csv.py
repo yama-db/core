@@ -8,13 +8,10 @@ import html
 import json
 import sys
 from argparse import ArgumentParser
-from pathlib import Path
 
 import jaconv
-import mysql.connector
 import regex
-from shared import extract_aliases
-from shared import generate_source_uuid
+from shared import db_util, extract_aliases
 
 parser = ArgumentParser(description="YAMAP/YamarecoのTSVファイルを変換してCSV出力")
 parser.add_argument(
@@ -27,22 +24,28 @@ args = parser.parse_args()
 source = args.source
 tsv_file = args.tsv_file
 
-try:
-    my_cnf = Path(sys.prefix).parent / ".my.cnf"
-    conn = mysql.connector.connect(
-        option_files=str(my_cnf),
-        option_groups=["client", "mysql"],
-        autocommit=False,
-    )
-    cursor = conn.cursor(dictionary=True)
-except mysql.connector.Error as e:
-    print(f"MySQL Error: {e}")
-    sys.exit(1)
+# MySQL接続の確立
+conn = None
+cursor = None
+success = False
 
 try:
+    conn, cursor = db_util.db_open()
+
+    fieldnames = [
+        "raw_id",
+        "raw_type",
+        "name",
+        "kana",
+        "lat",
+        "lon",
+        "elevation",
+        "z_min",
+        "last_updated_at",
+    ]
+
     with open(tsv_file, "r", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f, delimiter="\t")
-        fieldnames = ["source_uuid"] + reader.fieldnames
         writer = csv.DictWriter(sys.stdout, fieldnames=fieldnames)
         writer.writeheader()
         for row in reader:
@@ -56,6 +59,8 @@ try:
 
             lon = float(row["lon"])
             lat = float(row["lat"])
+            if (elevation := row["elevation"]) == "NULL":
+                elevation = None
             if lon and lat:
                 if not (abs(lon) <= 180.0 and abs(lat) <= 90.0):
                     print(
@@ -85,26 +90,27 @@ try:
                     )
                     continue
 
-            if row["elevation_m"] == "NULL":
-                row["elevation_m"] = ""
-
-            raw_remote_id = row["raw_remote_id"]
-            row["source_uuid"] = generate_source_uuid(f"{source}_poi", raw_remote_id)
             for n, k in extract_aliases(name, kana):
-                row["name"] = n
-                row["kana"] = k
-                writer.writerow(row)
+                writer.writerow(
+                    {
+                        "raw_id": row["raw_id"],
+                        "raw_type": row["raw_type"],
+                        "name": n,
+                        "kana": k,
+                        "lat": row["lat"],
+                        "lon": row["lon"],
+                        "elevation": elevation,
+                        "z_min": None,
+                        "last_updated_at": row["last_updated_at"],
+                    }
+                )
 
-except FileNotFoundError:
-    print(f"Error: '{tsv_file}' not found.", file=sys.stderr)
-except csv.Error as e:
-    print(f"CSV Error: {e}", file=sys.stderr)
-except json.JSONDecodeError as e:
-    print(f"JSON Decode Error: {e}", file=sys.stderr)
+    success = True
+
 except Exception as e:
     print(f"Error processing file: {e}", file=sys.stderr)
 finally:
-    cursor.close()
-    conn.close()
+    if conn or cursor:
+        db_util.db_close(conn, cursor, success=success)
 
 # __END__

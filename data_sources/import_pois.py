@@ -8,14 +8,13 @@ import json
 import sys
 from argparse import ArgumentParser
 from pathlib import Path
-from uuid import UUID
 
-import mysql.connector
+from shared import db_util, generate_source_uuid, tile_utils
 
 # コマンドライン引数の解析
 parser = ArgumentParser(description="POIのCSVファイルをDBに登録")
-parser.add_argument("csv_file", help="POIのCSVファイル・パス")
 parser.add_argument("table_name", help="登録先のテーブル名")
+parser.add_argument("csv_file", help="POIのCSVファイル・パス")
 parser.add_argument(
     "-m",
     "--max-count",
@@ -32,57 +31,31 @@ table_name = args.table_name
 max_count = args.max_count
 truncate = args.truncate
 
-# MySQL接続の確立
-try:
-    my_cnf = Path(sys.prefix).parent / ".my.cnf"
-    conn = mysql.connector.connect(
-        option_files=str(my_cnf),
-        option_groups=["client", "mysql"],
-        autocommit=False,
+query_insert = f"""
+    INSERT INTO `{table_name}` (
+        source_uuid, raw_id, raw_type, names_json,
+        geom, elevation, x_z18, y_z18, z_min, last_updated_at
+    ) VALUES (
+        %s, %s, %s, %s,
+        ST_GeomFromText(%s, 4326, "axis-order=long-lat"), %s, %s, %s, %s, %s
     )
-    cursor = conn.cursor(dictionary=True)
-except mysql.connector.Error as e:
-    print(f"MySQL Error: {e}")
-    sys.exit(1)
+    ON DUPLICATE KEY UPDATE
+        names_json = JSON_MERGE_PRESERVE(names_json, VALUES(names_json))
+"""
 
-# テーブルを空にする
-if truncate:
-    try:
-        cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
-        cursor.execute(f"TRUNCATE TABLE {table_name}")
-        cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
-        conn.commit()
-        print(f"Table {table_name} truncated.")
-    except mysql.connector.Error as e:
-        print(f"MySQL Error during truncation: {e}")
-        sys.exit(1)
+# MySQL接続の確立
+conn = None
+cursor = None
+success = False
 
-
-def insert_poi_data(values):
-    try:
-        cursor.executemany(
-            f"""
-            INSERT INTO {table_name} (
-                source_uuid, raw_remote_id, names_json,
-                geom, elevation_m, poi_type_raw, last_updated_at
-            ) VALUES (
-                %s, %s, %s,
-                ST_GeomFromText(%s, 4326, "axis-order=long-lat"), %s, %s, %s
-            )
-            ON DUPLICATE KEY UPDATE
-                names_json = JSON_MERGE_PRESERVE(names_json, VALUES(names_json))
-            """,
-            values,
-        )
-        conn.commit()
-    except mysql.connector.Error as e:
-        print(f"MySQL Error during insertion: {e}")
-        conn.rollback()
-        sys.exit(1)
-
-
-# CSVファイルの読み込み
 try:
+    conn, cursor = db_util.db_open()
+
+    # テーブルを空にする
+    if truncate:
+        db_util.truncate_table(cursor, table_name)
+
+    # CSVファイルの読み込み
     with open(csv_file, "r", encoding="utf-8-sig") as f:
         suffix = Path(csv_file).suffix.lower()
         delimiter = "\t" if suffix == ".tsv" else ","
@@ -90,43 +63,53 @@ try:
         count = 0
         values = []
         for row in reader:
-            source_uuid = row["source_uuid"]
-            if not source_uuid:  # 別名はスキップ
+            raw_id = row["raw_id"]
+            if not raw_id:  # 別名はスキップ
                 continue
-            uuid = UUID(source_uuid)
+            uuid = generate_source_uuid(table_name, raw_id)
             name = row["name"]
             kana = row["kana"]
-            names_json = json.dumps([{"name": name, "kana": kana}], ensure_ascii=False)
+            names_json = json.dumps(
+                [{"name": name, "kana": kana}], ensure_ascii=False
+            )
             lon = row["lon"]
             lat = row["lat"]
-            coord = f"POINT({lon} {lat})" if lon and lat else None
+            if lon and lat:
+                coord = f"POINT({lon} {lat})"
+                x_z18, y_z18 = tile_utils.lnglat_to_tile(float(lon), float(lat), 18)
+            else:
+                coord = None
+                x_z18, y_z18 = (None, None)
             values.append(
                 (
                     uuid.bytes,
-                    row["raw_remote_id"],
+                    raw_id,
+                    row["raw_type"],
                     names_json,
                     coord,
-                    row["elevation_m"] or None,
-                    row["poi_type_raw"],
+                    row["elevation"] or None,
+                    x_z18,
+                    y_z18,
+                    row["z_min"] or None,
                     row["last_updated_at"] or None,
                 )
             )
             count += 1
             if count % max_count == 0:
-                insert_poi_data(values)
-                print(f"Inserted {count} rows into {table_name}")
+                cursor.executemany(query_insert, values)
+                print(f"Inserted {count} rows into {table_name}", file=sys.stderr)
                 values = []
 
     if values:
-        insert_poi_data(values)
-        print(f"Inserted {count} rows into {table_name}")
+        cursor.executemany(query_insert, values)
+        print(f"Inserted {count} rows into {table_name}", file=sys.stderr)
+    success = True
 
-except FileNotFoundError:
-    print(f"File not found: {csv_file}")
-except csv.Error as e:
-    print(f"CSV Error: {e}")
-
-cursor.close()
-conn.close()
+except Exception as err:
+    print(f"Error during DB session: {err}", file=sys.stderr)
+    raise
+finally:
+    if conn or cursor:
+        db_util.db_close(conn, cursor, success=success)
 
 # __END__

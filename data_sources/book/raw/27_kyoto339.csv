@@ -1,4 +1,4 @@
-raw_remote_id,name,kana,elevation_m,unified_poi_id,description_text
+raw_id,name,kana,elevation,mountain_id,description
 1,経ヶ岬,きょうがみさき,201,22246,
 2,船津山,ふなつやま,548,10948,
 3,権現山,ごんげんやま,600.9,10947,

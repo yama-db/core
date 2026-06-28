@@ -1,4 +1,4 @@
-raw_remote_id,name,kana,elevation_m,unified_poi_id,description_text
+raw_id,name,kana,elevation,mountain_id,description
 1,久斗山,くとさん,650,804,
 2,観音山,かんのんさん,245,12784,
 3,三成山,みなるやま,536.2,12786,

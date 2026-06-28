@@ -4,11 +4,8 @@
 import re
 import sys
 from argparse import ArgumentParser
-from pathlib import Path
 
-import mysql.connector
-
-from shared import config
+from shared import config, db_util
 
 # コマンドライン引数の解析
 parser = ArgumentParser(description="GSI GCPを統合POIにリンク")
@@ -30,146 +27,120 @@ parser.add_argument(
 )
 args = parser.parse_args()
 table_name = args.table_name
-source_type = re.sub(r"^stg_|_pois$", "", table_name).upper()
 radius = args.radius
 truncate = args.truncate
 
 # MySQL接続の確立
+conn = None
+cursor = None
+success = False
+
 try:
-    my_cnf = Path(sys.prefix).parent / ".my.cnf"
-    conn = mysql.connector.connect(
-        option_files=str(my_cnf),
-        option_groups=["client", "mysql"],
-        autocommit=False,
-    )
-    cursor = conn.cursor(dictionary=True)
-except mysql.connector.Error as e:
-    print(f"MySQL Error: {e}")
-    sys.exit(1)
+    conn, cursor = db_util.db_open()
 
-cursor.execute("SELECT id FROM information_sources WHERE display_name = %s", (source_type,))
-source_id = cursor.fetchone()["id"]
-print(f"Using source_type: {source_type}, source_id: {source_id}")
-
-# 一時テーブルの作成（POI種別ごとのズームレベル）
-cursor.execute(
-    """
-    CREATE TEMPORARY TABLE poi_weights (
-        poi_type_raw VARCHAR(50) PRIMARY KEY,
-        min_zoom_level TINYINT NOT NULL
-    )
-    """,
-)
-cursor.executemany(
-    "INSERT INTO poi_weights (poi_type_raw, min_zoom_level) VALUES (%s, %s)",
-    [
-        ("経緯度原点", 8),
-        ("電子基準点", 8),
-        ("一等三角点", 8),
-        ("二等三角点", 9),
-        ("三等三角点", 10),
-        ("四等三角点", 11),
-        ("GPS固定点", 11),
-        ("標高点", 12),
-    ],
-)
-conn.commit()
-
-# 既存のリンクを削除
-if truncate:
     cursor.execute(
-        "DELETE FROM poi_links WHERE source_type = %s",
-        (source_type,)
+        f"""
+        SELECT DISTINCT id FROM information_sources WHERE source_table = %s
+        """,
+        (table_name,),
     )
-    conn.commit()
-    print(f"Existing links for {source_type} have been deleted.")
+    if not (rows := cursor.fetchall()):
+        raise ValueError(
+            f"Error: source_table '{table_name}' not found in information_sources."
+        )
+    source_id = rows[0]["id"]
 
-cursor.execute(
-    """
-    SELECT COALESCE(MAX(unified_poi_id), 0) AS max_id
-    FROM poi_links
-    WHERE source_type = %s
-    """,
-    (source_type,),
-)
-max_id = cursor.fetchone()["max_id"]
-print(f"Current max ID linked to {source_type}: {max_id}")
+    # 既存のリンクを削除
+    if truncate:
+        cursor.execute("DELETE FROM poi_links WHERE source_id = %s", (source_id,))
+        print(f"Existing links for {table_name} have been deleted.")
 
-cursor.execute(
-    """
-    SELECT id FROM unified_pois
-    WHERE display_lat != 0 AND display_lon != 0
-        AND id > %s
-    """,
-    (max_id,),
-)
-for row in cursor.fetchall():
-    id = row["id"]
-    # バッファの作成
+    # 現在、登録されているリンクの最大値
     cursor.execute(
         """
-        SELECT ST_Buffer(representative_geom, %s) INTO @buffer
-        FROM unified_pois
-        WHERE id = %s
+        SELECT COALESCE(MAX(mountain_id), 0) AS max_id
+        FROM poi_links
+        WHERE source_id = %s
         """,
-        (radius, id),
+        (source_id,),
     )
-    # バッファ内で最も標高の高いPOIを取得
+    max_id = cursor.fetchone()["max_id"]
+    print(f"Current max ID linked to {table_name}: {max_id}")
+
     cursor.execute(
-        f"""
-        SELECT source_uuid
-        FROM {table_name}
-        WHERE ST_Within(geom, @buffer)
-        ORDER BY elevation_m DESC
-        LIMIT 1
-        """,
+        "SELECT id FROM mountain_pois WHERE is_used AND id > %s",
+        (max_id,),
     )
-    result = cursor.fetchone()
-    if not result:
-        print(f"No GCP POI found within {radius}m for unified_poi_id {id}")
-        continue
-    source_uuid = result["source_uuid"]
-    # バッファ内で最小のズームレベルを取得
-    cursor.execute(
-        f"""
-        SELECT min_zoom_level
-        FROM {table_name}
-        JOIN poi_weights USING (poi_type_raw)
-        WHERE ST_Within(geom, @buffer)
-        ORDER BY min_zoom_level ASC
-        LIMIT 1
-        """,
-    )
-    result = cursor.fetchone()
-    assert result, "Expected at least one POI type weight"
-    min_zoom_level = result["min_zoom_level"]
-    try:
-        cursor.execute(
-            f"""
-            UPDATE unified_pois AS target
-            JOIN {table_name} AS source ON source.source_uuid = %s
-            SET 
-                target.representative_geom = source.geom,
-                target.elevation_m = source.elevation_m,
-                target.min_zoom_level = %s
-            WHERE target.id = %s
-            """,
-            (source_uuid, min_zoom_level, id),
-        )
+    for row in cursor.fetchall():
+        id = row["id"]
+        # バッファの作成
         cursor.execute(
             """
-            INSERT INTO poi_links (unified_poi_id, source_type, source_id, source_uuid, distance_m)
-            VALUES (%s, %s, %s, %s, %s)
+            SELECT ST_Buffer(geom, %s) INTO @buffer
+            FROM mountain_pois WHERE id = %s
             """,
-            (id, source_type, source_id, source_uuid, 0),
+            (radius, id),
         )
-        conn.commit()
-    except mysql.connector.Error as e:
-        print(f"MySQL Error during update for unified_poi_id {id}: {e}")
-        conn.rollback()
-        sys.exit(1)
 
-conn.close()
-cursor.close()
+        # バッファ内で最も標高の高いPOIを取得
+        cursor.execute(
+            f"""
+            SELECT source_uuid
+            FROM `{table_name}`
+            WHERE ST_Within(geom, @buffer)
+            ORDER BY elevation DESC
+            LIMIT 1
+            """,
+        )
+        result = cursor.fetchone()
+        if not result:
+            print(f"No GCP POI found within {radius}m for mountain_id {id}", file=sys.stderr)
+            continue
+        source_uuid = result["source_uuid"]
+
+        # バッファ内で最小のズームレベルを取得
+        cursor.execute(
+            f"""
+            SELECT z_min
+            FROM `{table_name}`
+            WHERE ST_Within(geom, @buffer)
+            ORDER BY z_min ASC
+            LIMIT 1
+            """,
+        )
+        result = cursor.fetchone()  # 少なくとも１つはある。
+        z_min = result["z_min"]
+
+        # 山岳統合POIの地理座標、標高、最小表示Zレベルを更新
+        cursor.execute(
+            f"""
+            UPDATE mountain_pois AS target
+            JOIN `{table_name}` AS source ON source.source_uuid = %s
+            SET 
+                target.geom = source.geom,
+                target.elevation = source.elevation,
+                target.z_min = %s
+            WHERE target.id = %s
+            """,
+            (source_uuid, z_min, id),
+        )
+
+        # 統合POIと情報源を関連付ける
+        cursor.execute(
+            """
+            INSERT INTO poi_links (mountain_id, source_id, source_uuid, linked_distance)
+            VALUES (%s, %s, %s, 0)
+            """,
+            (id, source_id, source_uuid),
+        )
+
+    success = True
+
+except Exception as err:
+    print(f"Error during DB session: {err}", file=sys.stderr)
+    raise
+finally:
+    if conn or cursor:
+        db_util.db_close(conn, cursor, success=success)
 
 # __END__

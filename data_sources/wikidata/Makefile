@@ -16,7 +16,7 @@ dist/wikidata.csv: convert_wikidata.py
 	sed -e '/,西沢渓谷,/d' -e '/,大鰐テレビ中継局,/d' > $@
 
 import: dist/wikidata.csv
-	python3 ../import_pois.py --truncate $< $(TABLE_NAME)
+	python3 ../import_pois.py --truncate $(TABLE_NAME) $<
 
 unify:
 	python3 ../unify_pois.py --truncate $(TABLE_NAME)

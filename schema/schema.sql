@@ -1,237 +1,212 @@
--- Schema for creating tables related to POI (Points of Interest) management
-
-CREATE TABLE information_sources (
-    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '情報源ID',
-    source_type ENUM('DIGITAL', 'BOOK', 'JOURNAL') NOT NULL COMMENT '情報源の種別',
-    display_name VARCHAR(100) NOT NULL UNIQUE COMMENT '表示用名称',
-    reliability_level TINYINT DEFAULT 50 COMMENT '信頼度順位（0が最高）'
-) COMMENT '情報源マスタテーブル';
-
-CREATE TABLE digital_service_details (
-    source_id INT PRIMARY KEY COMMENT '情報源ID',
-    organization_name VARCHAR(100) COMMENT '運営組織名',
-    base_url VARCHAR(255) COLLATE ascii_bin COMMENT 'サービスURL',
-    last_imported_at DATETIME COMMENT '最終取込日時',
-    FOREIGN KEY (source_id) REFERENCES information_sources(id)
-) COMMENT 'デジタルサービス情報詳細';
-
-CREATE TABLE book_details (
-    source_id INT PRIMARY KEY COMMENT '情報源ID',
-    formal_title VARCHAR(255) NOT NULL COMMENT '正式タイトル',
-    ndl_id VARCHAR(100) COLLATE ascii_bin COMMENT 'NDL Search ID',
-    author VARCHAR(100) COMMENT '著者',
-    publisher VARCHAR(100) COMMENT '出版社',
-    published_date DATE COMMENT '発行日',
-    FOREIGN KEY (source_id) REFERENCES information_sources(id)
-) COMMENT '書籍情報詳細';
+-- スキーマ定義（MySQL 8.0以降を想定）
 
 CREATE TABLE administrative_regions (
     jis_code CHAR(5) COLLATE ascii_bin NOT NULL PRIMARY KEY COMMENT '行政区画コード',
     pref_name VARCHAR(10) NOT NULL COMMENT '都道府県名',
     city_name VARCHAR(50) NOT NULL COMMENT '市区町村名',
-    full_name VARCHAR(60) GENERATED ALWAYS AS (concat(pref_name, city_name)) VIRTUAL COMMENT '検索用完全名称',
-    wikidata_qid VARCHAR(20) COLLATE ascii_bin COMMENT 'Wikidata QID',
-    pref_code CHAR(2) COLLATE ascii_bin GENERATED ALWAYS AS (LEFT(jis_code, 2)) VIRTUAL COMMENT '都道府県コード',
+    full_name VARCHAR(60) GENERATED ALWAYS AS (
+        concat(pref_name, city_name)
+    ) STORED COMMENT '行政区画名称',
+    pref_code CHAR(2) COLLATE ascii_bin GENERATED ALWAYS AS (
+        left(jis_code, 2)
+    ) STORED COMMENT '都道府県コード',
+    city_qid VARCHAR(20) COLLATE ascii_bin NOT NULL COMMENT '市区町村 QID',
+    pref_qid VARCHAR(20) COLLATE ascii_bin NOT NULL COMMENT '都道府県 QID',
     INDEX idx_pref_code (pref_code),
     INDEX idx_full_name (full_name)
-) COMMENT '行政区画マスタテーブル';
+) COMMENT '行政区画コード／名称';
 
 CREATE TABLE administrative_boundaries (
     id INT AUTO_INCREMENT PRIMARY KEY COMMENT '境界データID',
     jis_code CHAR(5) COLLATE ascii_bin NOT NULL COMMENT '行政区画コード',
-    geom POLYGON NOT NULL /*!80003 SRID 4326 */ COMMENT '境界ジオメトリ',
-    FOREIGN KEY (jis_code) REFERENCES administrative_regions(jis_code),
-    SPATIAL INDEX(geom)
+    geom POLYGON /*!80003 SRID 4326 */ NOT NULL COMMENT '境界データ',
+    FOREIGN KEY (jis_code) REFERENCES administrative_regions (jis_code),
+    SPATIAL INDEX (geom)
 ) COMMENT '行政区画境界データ';
 
-CREATE TABLE poi_categories (
-    id VARCHAR(20) COLLATE ascii_bin PRIMARY KEY COMMENT '種別ID',
-    display_name VARCHAR(50) NOT NULL COMMENT '表示名称',
-    icon_name VARCHAR(50) COMMENT 'アイコン名'
-) COMMENT 'POI種別マスタテーブル';
+CREATE TABLE information_sources (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '情報源ID',
+    info_type ENUM('DATASET', 'BOOK', 'WEBPAGE') NOT NULL COMMENT '情報源種別',
+    source_table VARCHAR(64) COLLATE ascii_bin NOT NULL COMMENT '参照先テーブル名',
+    display_name VARCHAR(100) NOT NULL UNIQUE COMMENT '表示用名称',
+    url VARCHAR(2083) COMMENT '情報源URL',
+    ndl_id VARCHAR(50) COLLATE ascii_bin COMMENT 'NDL ID（BOOK用）',
+    reliability_level TINYINT NOT NULL DEFAULT 50 COMMENT '信頼度順位（0が最高）'
+) COMMENT '情報源リスト';
 
-CREATE TABLE stg_gsi_dm25k_pois (
+CREATE TABLE _stg_template_pois (
     source_uuid BINARY(16) PRIMARY KEY COMMENT 'UUID v5',
-    raw_remote_id VARCHAR(100) COLLATE ascii_bin COMMENT '元データのID',
-    names_json JSON COMMENT '名称配列',
-    geom POINT NOT NULL /*!80003 SRID 4326 */ COMMENT '地理位置',
-    elevation_m DECIMAL(7, 2) COMMENT '標高（推定）',
-    -- 個別の属性
-    poi_type_raw VARCHAR(50) COMMENT '大分類-中分類-小分類',
-    last_updated_at DATETIME COMMENT 'データ更新日',
-    SPATIAL INDEX(geom)
-) COMMENT '国土地理院 数値地図(地名情報)';
+    raw_id VARCHAR(100) COLLATE ascii_bin NOT NULL COMMENT 'データ識別子',
+    raw_type VARCHAR(100) NOT NULL COMMENT 'データ種別',
+    names_json JSON NOT NULL COMMENT '山名・よみ',
+    geom POINT /*!80003 SRID 4326 */ NOT NULL COMMENT '地理座標',
+    lat DECIMAL(9, 6) GENERATED ALWAYS AS (
+        st_latitude(geom)
+    ) STORED COMMENT '緯度',
+    lon DECIMAL(10, 6) GENERATED ALWAYS AS (
+        st_longitude(geom)
+    ) STORED COMMENT '経度',
+    elevation DECIMAL(7, 2) COMMENT '標高[m]',
+    x_z18 MEDIUMINT UNSIGNED COMMENT 'タイルX座標',
+    y_z18 MEDIUMINT UNSIGNED COMMENT 'タイルY座標',
+    z_min INT COMMENT '最小表示Zレベル',
+    last_updated_at DATETIME COMMENT '更新日時',
+    UNIQUE INDEX uq_raw_id (raw_id),
+    SPATIAL INDEX (geom),
+    INDEX idx_tile_x_y (x_z18, y_z18)
+) COMMENT 'POIテーブル共通構造';
 
-CREATE TABLE stg_gsi_vtexp_pois (
-    source_uuid BINARY(16) PRIMARY KEY COMMENT 'UUID v5',
-    raw_remote_id VARCHAR(100) COLLATE ascii_bin COMMENT '元データのID',
-    names_json JSON COMMENT '名称配列',
-    geom POINT NOT NULL /*!80003 SRID 4326 */ COMMENT '地理位置',
-    elevation_m DECIMAL(6, 1) COMMENT '標高（推定）',
-    -- 個別の属性
-    poi_type_raw VARCHAR(50) COMMENT '注記分類',
-    last_updated_at DATETIME COMMENT 'lfSpanFr',
-    SPATIAL INDEX(geom)
-) COMMENT '国土地理院 自然地名ベクトルタイル';
+/* names_jsonの例：
+[
+    {"name": "羊蹄山", "kana": "ようていざん"},
+    {"name": "蝦夷富士", "kana": "えぞふじ"}
+]
+*/
 
-CREATE TABLE stg_gsi_gcp_pois (
-    source_uuid BINARY(16) PRIMARY KEY COMMENT 'UUID v5',
-    raw_remote_id VARCHAR(100) COLLATE ascii_bin COMMENT '元データのID',
-    names_json JSON COMMENT '名称配列(点名)',
-    geom POINT NOT NULL /*!80003 SRID 4326 */ COMMENT '地理位置',
-    elevation_m DECIMAL(6, 1) COMMENT '標高',
-    -- 個別の属性
-    poi_type_raw VARCHAR(50) COMMENT '基準点の種類',
-    last_updated_at DATETIME COMMENT 'データ更新日',
-    SPATIAL INDEX(geom)
-) COMMENT '国土地理院 基準点データ';
+CREATE TABLE stg_gsi_gcp_pois LIKE _stg_template_pois;
+ALTER TABLE stg_gsi_gcp_pois COMMENT '基盤地図情報（基準点・標高点）';
 
-CREATE TABLE stg_yamap_pois (
-    source_uuid BINARY(16) PRIMARY KEY COMMENT 'UUID v5',
-    raw_remote_id VARCHAR(100) COLLATE ascii_bin COMMENT 'API上の数値ID等',
-    names_json JSON COMMENT '名称配列',
-    geom POINT NOT NULL /*!80003 SRID 4326 */ COMMENT '地理位置',
-    elevation_m DECIMAL(6, 1) COMMENT '標高',
-    -- 個別の属性
-    poi_type_raw VARCHAR(50) COMMENT '元データの種別名',
-    page_url VARCHAR(255) COLLATE ascii_bin COMMENT 'WebページURL',
-    last_updated_at DATETIME COMMENT 'データ更新日',
-    SPATIAL INDEX(geom)
-) COMMENT 'YAMAP Landmarks';
+CREATE TABLE stg_gsi_dm25k_pois LIKE _stg_template_pois;
+ALTER TABLE stg_gsi_dm25k_pois COMMENT '数値地図25000（地名・公共施設）';
 
-CREATE TABLE stg_yamareco_pois (
-    source_uuid BINARY(16) PRIMARY KEY COMMENT 'UUID v5',
-    raw_remote_id VARCHAR(100) COLLATE ascii_bin COMMENT 'API上の数値ID等',
-    names_json JSON COMMENT '名称配列',
-    geom POINT NOT NULL /*!80003 SRID 4326 */ COMMENT '地理位置',
-    elevation_m DECIMAL(6, 1) COMMENT '標高',
-    -- 個別の属性
-    poi_type_raw VARCHAR(255) COMMENT '元データの種別名',
-    page_url VARCHAR(255) COLLATE ascii_bin COMMENT 'WebページURL',
-    last_updated_at DATETIME COMMENT 'データ更新日',
-    SPATIAL INDEX(geom)
-) COMMENT 'YamaReco POIデータ';
+CREATE TABLE stg_gsi_vtexp_pois LIKE _stg_template_pois;
+ALTER TABLE stg_gsi_vtexp_pois COMMENT 'ベクトルタイル提供実験（地名情報）';
 
-CREATE TABLE stg_wikidata_pois (
-    source_uuid BINARY(16) PRIMARY KEY COMMENT 'UUID v5',
-    raw_remote_id VARCHAR(100) COLLATE ascii_bin COMMENT 'Wikidata QID',
-    names_json JSON COMMENT '名称配列',
-    geom POINT NOT NULL /*!80003 SRID 4326 */ COMMENT '地理位置',
-    elevation_m DECIMAL(6, 1) COMMENT '標高',
-    -- 個別の属性
-    poi_type_raw VARCHAR(50) COMMENT '元データの種別名',
-    page_url VARCHAR(255) COLLATE ascii_bin COMMENT 'WebページURL',
-    last_updated_at DATETIME COMMENT 'データ更新日',
-    SPATIAL INDEX(geom)
-) COMMENT 'Wikidata POIデータ';
+CREATE TABLE stg_wikidata_pois LIKE _stg_template_pois;
+ALTER TABLE stg_wikidata_pois COMMENT 'ウィキデータ';
 
-CREATE TABLE stg_legacy_pois (
-    source_uuid BINARY(16) PRIMARY KEY COMMENT 'UUID v5',
-    raw_remote_id VARCHAR(100) COLLATE ascii_bin COMMENT 'ID',
-    names_json JSON COMMENT '名称配列',
-    geom POINT NOT NULL /*!80003 SRID 4326 */ COMMENT '地理位置',
-    elevation_m DECIMAL(6, 1) COMMENT '標高',
-    -- 個別の属性
-    poi_type_raw VARCHAR(50) COMMENT '種別名',
-    last_updated_at DATETIME COMMENT 'データ更新日',
-    SPATIAL INDEX(geom)
-) COMMENT '山名一覧 on the Web地図（旧DB）';
+CREATE TABLE stg_yamap_pois LIKE _stg_template_pois;
+ALTER TABLE stg_yamap_pois COMMENT 'ヤマップ';
 
-CREATE TABLE stg_book_pois (
+CREATE TABLE stg_yamareco_pois LIKE _stg_template_pois;
+ALTER TABLE stg_yamareco_pois COMMENT 'ヤマレコ';
+
+CREATE TABLE stg_legacy_pois LIKE _stg_template_pois;
+ALTER TABLE stg_legacy_pois COMMENT '山名一覧 on the Web地図';
+
+CREATE TABLE stg_book_web_pois (
     source_uuid BINARY(16) PRIMARY KEY COMMENT 'UUID v5',
-    raw_remote_id VARCHAR(100) COLLATE ascii_bin COMMENT '掲載ページ・項番等',
-    names_json JSON COMMENT '名称配列',
-    geom POINT /*!80003 SRID 4326 */ COMMENT '地理位置（推定）',
-    elevation_m DECIMAL(6, 1) COMMENT '標高',
-    -- 個別の属性
     source_id INT NOT NULL COMMENT '情報源ID',
-    unified_poi_id INT COMMENT '統合実体ID',
-    poi_type_raw VARCHAR(50) COMMENT '分類(名峰、里山等)',
-    description_text TEXT COMMENT '説明文',
-    FOREIGN KEY (source_id) REFERENCES information_sources(id),
-    FOREIGN KEY (unified_poi_id) REFERENCES unified_pois(id)
-) COMMENT '書籍由来のPOIデータ';
+    raw_id VARCHAR(100) COLLATE ascii_bin NOT NULL COMMENT 'データ識別子',
+    raw_type VARCHAR(100) NOT NULL COMMENT 'データ種別',
+    names_json JSON NOT NULL COMMENT '山名・よみ',
+    geom POINT /*!80003 SRID 4326 */ COMMENT '地理座標',
+    lat DECIMAL(9, 6) GENERATED ALWAYS AS (
+        if(geom IS NOT NULL, st_latitude(geom), NULL)
+    ) STORED COMMENT '緯度',
+    lon DECIMAL(10, 6) GENERATED ALWAYS AS (
+        if(geom IS NOT NULL, st_longitude(geom), NULL)
+    ) STORED COMMENT '経度',
+    elevation DECIMAL(7, 2) COMMENT '標高[m]',
+    x_z18 MEDIUMINT UNSIGNED COMMENT 'タイルX座標',
+    y_z18 MEDIUMINT UNSIGNED COMMENT 'タイルY座標',
+    z_min INT COMMENT '最小表示Zレベル',
+    last_updated_at DATETIME COMMENT '更新日時',
+    UNIQUE INDEX uq_source_raw_id (source_id, raw_id),
+    INDEX idx_tile_x_y (x_z18, y_z18)
+) COMMENT '書籍・ウェブサイト';
 
-CREATE TABLE unified_pois (
-    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '統合実体ID',
-    category_id VARCHAR(20) COLLATE ascii_bin NOT NULL COMMENT '種別ID',
-    representative_name VARCHAR(255) COLLATE utf8mb4_bin COMMENT '代表名称(異体字保持)',
-    representative_kana VARCHAR(255) COMMENT '代表名称読み仮名',
-    representative_geom POINT NOT NULL /*!80003 SRID 4326 */ COMMENT '代表座標',
-    display_lat DECIMAL(9, 6) GENERATED ALWAYS AS (ST_Latitude(representative_geom)) VIRTUAL COMMENT '緯度',
-    display_lon DECIMAL(10, 6) GENERATED ALWAYS AS (ST_Longitude(representative_geom)) VIRTUAL COMMENT '経度',
-    elevation_m DECIMAL(7, 2) COMMENT '代表標高',
-    address_text VARCHAR(255) COMMENT '表示用所在地',
-    min_zoom_level TINYINT NOT NULL DEFAULT 13 COMMENT '表示開始ズームレベル',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '作成日時',
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新日時',
-    FOREIGN KEY (category_id) REFERENCES poi_categories(id),
-    SPATIAL INDEX(representative_geom),
-    INDEX idx_category_zoom (category_id, min_zoom_level)
-) COMMENT '統合POIテーブル';
-
-CREATE TABLE poi_links (
-    unified_poi_id INT NOT NULL COMMENT '統合実体ID',
-    source_type ENUM (
-        'GSI_GCP',
-        'GSI_VTEXP',
-        'GSI_DM25K',
-        'YAMAP',
-        'YAMARECO',
-        'WIKIDATA',
-        'LEGACY',
-        'BOOK'
-    ) NOT NULL COMMENT '参照先テーブル種別',
-    source_id INT NOT NULL COMMENT '情報源ID',
-    source_uuid BINARY(16) NOT NULL COMMENT '情報源UUID',
-    distance_m FLOAT NOT NULL COMMENT '位置の距離',
-    PRIMARY KEY (unified_poi_id, source_uuid),
-    UNIQUE INDEX uq_poi_source_id (unified_poi_id, source_id),
-    FOREIGN KEY (unified_poi_id) REFERENCES unified_pois(id),
-    FOREIGN KEY (source_id) REFERENCES information_sources(id),
-    INDEX idx_source_uuid (source_uuid)
-) COMMENT 'POIと元データの関連付けテーブル';
-
-CREATE TABLE poi_administrative_regions (
-    unified_poi_id INT NOT NULL COMMENT '統合実体ID',
-    jis_code CHAR(5) COLLATE ascii_bin NOT NULL COMMENT '行政区画コード',
-    is_primary BOOLEAN DEFAULT FALSE COMMENT '主所在地フラグ',
-    PRIMARY KEY (unified_poi_id, jis_code),
-    FOREIGN KEY (unified_poi_id) REFERENCES unified_pois(id),
-    FOREIGN KEY (jis_code) REFERENCES administrative_regions(jis_code),
-    INDEX idx_jis_code (jis_code)
-) COMMENT 'POIと行政区画の関連付け';
+CREATE TABLE mountain_pois (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '統合ID',
+    is_used BOOLEAN NOT NULL DEFAULT FALSE COMMENT '使用中フラグ',
+    main_name VARCHAR(255) COMMENT '代表名称',
+    main_kana VARCHAR(255) COMMENT '代表よみがな',
+    geom POINT /*!80003 SRID 4326 */ NOT NULL COMMENT '地理座標',
+    lat DECIMAL(9, 6) GENERATED ALWAYS AS (
+        st_latitude(geom)
+    ) STORED COMMENT '緯度',
+    lon DECIMAL(10, 6) GENERATED ALWAYS AS (
+        st_longitude(geom)
+    ) STORED COMMENT '経度',
+    elevation DECIMAL(7, 2) NOT NULL COMMENT '標高',
+    x_z18 MEDIUMINT UNSIGNED COMMENT 'タイルX座標',
+    y_z18 MEDIUMINT UNSIGNED COMMENT 'タイルY座標',
+    z_min INT COMMENT '最小表示Zレベル',
+    last_updated_at DATETIME COMMENT '更新日時',
+    SPATIAL INDEX (geom),
+    INDEX idx_tile_x_y (x_z18, y_z18)
+) COMMENT '山岳統合POI';
 
 CREATE TABLE poi_hierarchies (
     parent_id INT NOT NULL COMMENT '親POI ID',
-    parent_name VARCHAR(255) COMMENT '親POI名称',
+    parent_name VARCHAR(255) NOT NULL COMMENT '親POI名称',
     child_id INT NOT NULL COMMENT '子POI ID',
-    child_name VARCHAR(255) COMMENT '子POI名称',
-    relation_type ENUM('MEMBER', 'SUB_RANGE') DEFAULT 'MEMBER' COMMENT '子POI属性',
+    child_name VARCHAR(255) NOT NULL COMMENT '子POI名称',
+    relation_type ENUM(
+        'AREA_TO_PEAK',
+        'MAIN_TO_SUB_PEAK'
+    ) NOT NULL COMMENT '関係種別',
+    is_representative BOOLEAN NOT NULL DEFAULT FALSE COMMENT '代表フラグ',
     PRIMARY KEY (parent_id, child_id),
-    FOREIGN KEY (parent_id) REFERENCES unified_pois(id),
-    FOREIGN KEY (child_id) REFERENCES unified_pois(id)
-) COMMENT 'POIの親子関係テーブル';
+    FOREIGN KEY (parent_id) REFERENCES mountain_pois (id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (child_id) REFERENCES mountain_pois (id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) COMMENT '統合POIの階層構造';
+
+CREATE TABLE poi_links (
+    mountain_id INT NOT NULL COMMENT '統合ID',
+    source_id INT NOT NULL COMMENT '情報源ID',
+    source_uuid BINARY(16) NOT NULL COMMENT '情報源UUID',
+    linked_distance FLOAT NOT NULL COMMENT '統合・情報源間距離[m]',
+    PRIMARY KEY (source_uuid, mountain_id),
+    FOREIGN KEY (mountain_id) REFERENCES mountain_pois (id),
+    FOREIGN KEY (source_id) REFERENCES information_sources (id),
+    INDEX idx_source_uuid (source_uuid)
+) COMMENT '統合POIと情報源の関連付け';
 
 CREATE TABLE poi_names (
     id INT AUTO_INCREMENT PRIMARY KEY COMMENT '名称ID',
-    unified_poi_id INT NOT NULL COMMENT '統合実体ID',
+    mountain_id INT NOT NULL COMMENT '統合ID',
     source_uuid BINARY(16) NOT NULL COMMENT '情報源UUID',
     source_id INT NOT NULL COMMENT '情報源ID',
-    name_text VARCHAR(255) COLLATE utf8mb4_bin NOT NULL COMMENT '表示用名称(異体字保持)',
-    name_normalized VARCHAR(255) NOT NULL COMMENT '検索用正規化名称',
-    name_reading VARCHAR(255) COMMENT '読み仮名',
-    name_type ENUM('MAIN', 'ALIAS', 'OLD', 'LOCAL') DEFAULT 'MAIN' COMMENT '名称種別',
-    is_preferred BOOLEAN DEFAULT FALSE COMMENT '代表名称フラグ',
-    FOREIGN KEY (unified_poi_id) REFERENCES unified_pois(id),
-    FOREIGN KEY (source_id) REFERENCES information_sources(id),
+    poi_name VARCHAR(255) NOT NULL COMMENT '名称',
+    poi_name_normalized VARCHAR(255) NOT NULL COMMENT '検索用正規化名称',
+    poi_kana VARCHAR(255) NOT NULL COMMENT 'よみがな',
+    name_type ENUM('MAIN', 'ALIAS') NOT NULL DEFAULT 'MAIN' COMMENT '名称種別',
+    is_preferred BOOLEAN NOT NULL DEFAULT FALSE COMMENT '代表名称フラグ',
+    FOREIGN KEY (mountain_id) REFERENCES mountain_pois (id),
+    FOREIGN KEY (source_id) REFERENCES information_sources (id),
     INDEX idx_source_uuid (source_uuid),
-    INDEX idx_name_normalized (name_normalized)
-) COMMENT 'POI名称テーブル';
+    INDEX idx_poi_name_normalized (poi_name_normalized)
+) COMMENT '統合POI名称';
 
 CREATE TABLE poi_address_map (
-    unified_poi_id INT NOT NULL COMMENT '統合実体ID',
+    mountain_id INT NOT NULL COMMENT '統合ID',
     jis_code CHAR(5) COLLATE ascii_bin NOT NULL COMMENT '行政区画コード',
-    PRIMARY KEY (unified_poi_id, jis_code),
-    INDEX idx_jis_code (jis_code)
-) COMMENT 'POIと行政区画コードの紐付けテーブル';
+    PRIMARY KEY (mountain_id, jis_code),
+    INDEX idx_jis_code (jis_code),
+    CONSTRAINT fk_poi_address_mountain
+    FOREIGN KEY (mountain_id) REFERENCES mountain_pois (id)
+    ON DELETE CASCADE,
+    CONSTRAINT fk_poi_address_region
+    FOREIGN KEY (jis_code) REFERENCES administrative_regions (jis_code)
+    ON DELETE RESTRICT
+) COMMENT '統合POIと行政区画の紐付け';
+
+CREATE TABLE mountain_records (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '山行記録ID',
+    start_date DATE NOT NULL COMMENT '開始日',
+    end_date DATE NOT NULL COMMENT '終了日',
+    published_at DATETIME COMMENT '公開日',
+    title VARCHAR(255) NOT NULL COMMENT 'タイトル',
+    summary TEXT COMMENT '概略',
+    public_url VARCHAR(2083) COMMENT '公開URL',
+    image_url VARCHAR(2083) COMMENT '画像URL',
+    INDEX idx_start_date (start_date),
+    INDEX idx_published_at (published_at)
+) COMMENT '山行記録';
+
+CREATE TABLE visited_mountains (
+    mountain_record_id INT NOT NULL COMMENT '山行記録ID',
+    mountain_id INT NOT NULL COMMENT '統合ID',
+    climb_date DATE NOT NULL COMMENT '登頂日',
+    climb_order INT NOT NULL COMMENT '登頂順',
+    PRIMARY KEY (mountain_record_id, mountain_id),
+    CONSTRAINT fk_visited_mountains_record
+    FOREIGN KEY (mountain_record_id) REFERENCES mountain_records (id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_visited_mountains_poi
+    FOREIGN KEY (mountain_id) REFERENCES mountain_pois (id)
+    ON DELETE RESTRICT ON UPDATE CASCADE
+) COMMENT '登頂リスト';

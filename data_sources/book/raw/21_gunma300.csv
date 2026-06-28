@@ -1,4 +1,4 @@
-raw_remote_id,name,kana,elevation_m,unified_poi_id,description_text
+raw_id,name,kana,elevation,mountain_id,description
 1,高天ヶ原山,たかまがはらやま,1979,17902,
 2,大ナゲシ,おおなげし,1532,17855,
 3,赤岩岳,あかいわだけ,1570,17856,

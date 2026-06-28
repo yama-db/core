@@ -9,28 +9,45 @@ import sys
 import Levenshtein
 import regex
 
-trans_table = str.maketrans({
-    ")": "）",
-    " ": "",
-    "、": "・",
-    "　": "・",
-    "/": "／",
-})
+trans_table = str.maketrans(
+    {
+        ")": "）",
+        " ": "",
+        "、": "・",
+        "　": "・",
+        "/": "／",
+    }
+)
+
 
 def extract_aliases(name, kana):
     data = []
-    name = re.sub(r'\s*[\(（]', '（', name)
+    name = re.sub(r"\s*[\(（]", "（", name)
     name = name.translate(trans_table)
     kana = kana.translate(trans_table)
-    if not (regex.findall(r'[^\p{L}\p{N}]', name) or regex.findall(r'[^\p{L}\p{N}]', kana)):
+    if not (
+        regex.findall(r"[^\p{L}\p{N}]", name) or regex.findall(r"[^\p{L}\p{N}]", kana)
+    ):
         data.append((name, kana))
         return data
-    name = re.sub(r'／.*$', '', name)
-    kana = re.sub(r'／.*$', '', kana)
-    m_name = re.fullmatch(r'(.+)（(.+?)）', name)
-    m_kana = re.fullmatch(r'(.+)（(.+?)）', kana)
+    name = re.sub(r"／.*$", "", name)
+    kana = re.sub(r"／.*$", "", kana)
+    m_name = re.fullmatch(r"(.+)（(.+?)）", name)
+    m_kana = re.fullmatch(r"(.+)（(.+?)）", kana)
     if m_name and (
-        m_name.group(2) in ["東峰", "西峰", "南峰", "北峰", "中央峰", "主峰", "中峰", "南岳", "三角点", "Ⅳ峰"]
+        m_name.group(2)
+        in [
+            "東峰",
+            "西峰",
+            "南峰",
+            "北峰",
+            "中央峰",
+            "主峰",
+            "中峰",
+            "南岳",
+            "三角点",
+            "Ⅳ峰",
+        ]
         or m_name.group(2).endswith("ピーク")
     ):
         # 親峰（支峰）
@@ -74,11 +91,20 @@ def extract_aliases(name, kana):
             data.append((m_name.group(1), kana))
             for n in s_name:
                 if not n.endswith(("市", "町")):
-                    k = kana if Levenshtein.jaro_winkler(n, m_name.group(1)) >= 0.6 else None
+                    k = (
+                        kana
+                        if Levenshtein.jaro_winkler(n, m_name.group(1)) >= 0.6
+                        else None
+                    )
                     data.append((n, k))
             return data
         for i in range(1, 3):
-            k = kana if i == 1 or Levenshtein.jaro_winkler(m_name.group(i), m_name.group(1)) >= 0.6 else None
+            k = (
+                kana
+                if i == 1
+                or Levenshtein.jaro_winkler(m_name.group(i), m_name.group(1)) >= 0.6
+                else None
+            )
             data.append((m_name.group(i), k))
         return data
     if m_kana:
@@ -111,7 +137,9 @@ if __name__ == "__main__":
         tsv_file = "../data_sources/yamareco/archive/yamareco.tsv"
         with open(tsv_file, "r", encoding="utf-8-sig") as f:
             reader = csv.DictReader(f, delimiter="\t")
-            writer = csv.DictWriter(sys.stdout, fieldnames=["raw_remote_id", "name", "kana"])
+            writer = csv.DictWriter(
+                sys.stdout, fieldnames=["raw_remote_id", "name", "kana"]
+            )
             writer.writeheader()
             for row in reader:
                 raw_remote_id = row["raw_remote_id"]
@@ -120,11 +148,13 @@ if __name__ == "__main__":
                 if not kana:
                     continue
                 for n, k in extract_aliases(name, kana):
-                    writer.writerow({
-                        "raw_remote_id": raw_remote_id,
-                        "name": n,
-                        "kana": k,
-                    })
+                    writer.writerow(
+                        {
+                            "raw_remote_id": raw_remote_id,
+                            "name": n,
+                            "kana": k,
+                        }
+                    )
     except FileNotFoundError:
         print(f"Error: '{tsv_file}' not found.", file=sys.stderr)
         sys.exit(1)

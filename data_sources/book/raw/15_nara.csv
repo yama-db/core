@@ -1,4 +1,4 @@
-raw_remote_id,name,kana,elevation_m,unified_poi_id,description_text
+raw_id,name,kana,elevation,mountain_id,description
 1,生駒山,いこまやま,642.0,732,
 2,大原山,おおはらやま,514.2,23442,
 3,信貴山,しぎさん,437,733,

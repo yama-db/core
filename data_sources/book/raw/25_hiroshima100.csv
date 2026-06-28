@@ -1,4 +1,4 @@
-raw_remote_id,name,kana,elevation_m,unified_poi_id,description_text
+raw_id,name,kana,elevation,mountain_id,description
 1,吉和冠山,よしわかんむりやま,1339,865,
 2,小室井山,こむろいやま,1072.2,21300,
 3,十方山,じっぽうざん,1318.9,863,

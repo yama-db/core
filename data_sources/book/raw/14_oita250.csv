@@ -1,4 +1,4 @@
-raw_remote_id,name,kana,elevation_m,unified_poi_id,description_text
+raw_id,name,kana,elevation,mountain_id,description
 1,石槌山,いしづちさん,486.2,15261,
 2,瀬平山,せびらやま,282.5,23721,
 3,大村山,おおむれさん,418.6,16327,

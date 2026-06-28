@@ -1,4 +1,4 @@
-raw_remote_id,name,kana,elevation_m,unified_poi_id,description_text
+raw_id,name,kana,elevation,mountain_id,description
 1,大萱山,おおかややま,1154,2800,
 2,白浜山,しらはまやま,1125,17851,
 3,宝生山,ほうしょうざん,1154,17866,

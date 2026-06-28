@@ -1,4 +1,4 @@
-raw_remote_id,name,kana,elevation_m,unified_poi_id,description_text
+raw_id,name,kana,elevation,mountain_id,description
 1,御前峰（白山）,ごぜんがみね,2702.17,683,
 2,大汝峰（白山）,おおなんじがみね,2684,9575,
 3,剣ヶ峰（白山）,けんがみね,2660,9571,

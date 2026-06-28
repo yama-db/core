@@ -10,8 +10,8 @@ import mysql.connector
 
 # コマンドライン引数の解析
 parser = ArgumentParser(description="行政区域境界のGeoJSONファイルをDBに登録")
-parser.add_argument("geojson_file", help="行政区域境界のGeoJSONファイル・パス")
 parser.add_argument("table_name", help="登録先のテーブル名")
+parser.add_argument("geojson_file", help="行政区域境界のGeoJSONファイル・パス")
 parser.add_argument(
     "-m",
     "--max-count",

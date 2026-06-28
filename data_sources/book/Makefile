@@ -1,21 +1,19 @@
 # Makefile for book data source
 .DELETE_ON_ERROR:
 
-TABLE_NAMES = information_sources digital_service_details book_details
+TABLE_NAME := stg_book_web_pois
 
 all: ;
 
 import:
-	@for table in $(TABLE_NAMES); do \
-		python3 ../import_csv.py --truncate raw/$$table.csv $$table; \
-	done
+	python3 ../import_csv.py --truncate information_sources raw/information_sources.csv
 	@for csv_file in raw/[0-9]*.csv; do \
 		source_id=$$(echo $$csv_file | sed -E 's|raw/([0-9]+)_.*\.csv|\1|'); \
-		python3 import_book.py --truncate $$source_id $$csv_file; \
+		python3 import_book.py --truncate $(TABLE_NAME) $$source_id $$csv_file; \
 	done
 
 unify:
-	python3 ../unify_pois.py --truncate stg_book_pois
+	python3 ../unify_pois.py --truncate $(TABLE_NAME)
 
 clean: ;
 

@@ -1,4 +1,4 @@
-raw_remote_id,name,kana,elevation_m,unified_poi_id,description_text
+raw_id,name,kana,elevation,mountain_id,description
 1,鷲頭山,わしずさん,392,9162,
 2,発端丈山,ほったんじょうやま,410,9163,
 3,城山,じょうやま,342.2,9168,
