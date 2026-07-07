@@ -3,12 +3,15 @@
 
 all: dist/mountain_pois.csv
 
+dist:
+	mkdir -p $@
+
 # Auxiliary file generated alongside the main unified POI data
 AUX_FILE := dist/poi_hierarchies.csv
 # Additional hierarchies to be registered
 ADDITION := raw/poi_hierarchies_addition.csv
 
-dist/mountain_pois.csv: gen_mountain_pois.py
+dist/mountain_pois.csv: gen_mountain_pois.py | dist
 	python3 gen_mountain_pois.py $@ $(AUX_FILE)
 
 import: dist/mountain_pois.csv import_mountain_pois.py
