@@ -13,18 +13,19 @@ parser.add_argument("csv_file", help="Input file with wikipedia URLs")
 args = parser.parse_args()
 
 
-def get_wikipedia_extract(url: str) -> str:
+def get_wikipedia_extract(url: str) -> tuple[str, str]:
     parsed_url = urllib.parse.unquote(url)
     title = parsed_url.split("/")[-1]
     api_url = "https://ja.wikipedia.org/w/api.php"
     params = {
         "action": "query",
         "format": "json",
-        "prop": "extracts",
+        "prop": "extracts|revisions",
         "exintro": True,
         "explaintext": True,
         "exsentences": 1,
         "titles": title,
+        "rvprop": "timestamp",
     }
     headers = {
         "User-Agent": "MyMountainReadingBot/1.0 (contact: user@example.com)",
@@ -36,6 +37,8 @@ def get_wikipedia_extract(url: str) -> str:
         pages = data.get("query", {}).get("pages", {})
         page_id = next(iter(pages))
         extract = pages[page_id].get("extract", "")
+        revisions = pages[page_id].get("revisions", [])
+        timestamp = revisions[0].get("timestamp") if revisions else None
     except requests.RequestException as e:
         print(f"Request error fetching {url}: {e}", file=sys.stderr)
         sys.exit(1)
@@ -43,12 +46,12 @@ def get_wikipedia_extract(url: str) -> str:
         print(f"Error fetching {url}: {e}", file=sys.stderr)
         sys.exit(1)
 
-    return extract
+    return extract, timestamp
 
 
-with open(args.csv_file, newline="", encoding="utf-8") as f:
+with open(args.csv_file, encoding="utf-8") as f:
     reader = csv.DictReader(f)
-    writer = csv.DictWriter(sys.stdout, fieldnames=["item", "extract"])
+    writer = csv.DictWriter(sys.stdout, fieldnames=["item", "extract", "timestamp"])
     writer.writeheader()
     qids = set()
     for row in reader:
@@ -60,12 +63,13 @@ with open(args.csv_file, newline="", encoding="utf-8") as f:
         wikipedia_url = row.get("wikipedia_url")
         if not wikipedia_url:
             continue
-        extract = get_wikipedia_extract(wikipedia_url)
+        extract, timestamp = get_wikipedia_extract(wikipedia_url)
         print(f"Fetched extract for {item}: '{extract}'", file=sys.stderr)
         writer.writerow(
             {
                 "item": item,
                 "extract": extract,
+                "timestamp": timestamp,
             }
         )
 

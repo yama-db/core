@@ -5,6 +5,7 @@ import csv
 import re
 import sys
 from argparse import ArgumentParser
+from datetime import datetime
 from itertools import product
 from typing import Dict, List
 
@@ -17,21 +18,33 @@ args = parser.parse_args()
 data_csv = args.data_csv
 pedia_csv = args.pedia_csv
 
-extracts = {}
+pedia = {}
 
 with open(pedia_csv, encoding="utf-8-sig") as f:
     reader = csv.DictReader(f)
     for row in reader:
         item = row["item"]
         qid = item.split("/")[-1]
-        if qid in extracts:
+        if qid in pedia:
             print(f"Warning: Duplicate extract for {qid}", file=sys.stderr)
-        extracts[qid] = re.sub(
-            r"^(?:この(?:項の)?)?「?(.+?)」?は、.*$", r"\1", row["extract"]
+        extract = re.sub(
+            r"^(?:この(?:項の)?)?「?(.+?)」?は、.*$",
+            r"\1",
+            row["extract"].replace("\n", ""),
         )
+        timestamp = datetime.fromisoformat(row["timestamp"]).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+        pedia[qid] = {
+            "extract": row["extract"],
+            "timestamp": row["timestamp"],
+        }
 
 
 def extract_name_and_kana(extract: str, label: str) -> List[Dict[str, str]]:
+    formatted_extract = re.sub(
+        r"^(?:この(?:項の)?)?「?(.+?)」?は、.*$", r"\1", extract.replace("\n", "")
+    )
     if m := re.search(r"^(.*?)[（\(]", label):
         label = m.group(1).strip()
     name = label
@@ -86,11 +99,10 @@ with open(data_csv, encoding="utf-8-sig") as f:
     writer.writeheader()
     ids = set()
     for row in reader:
-        raw_id = row["item"].split("/")[-1]
-        if is_first := raw_id not in ids:
-            ids.add(raw_id)
-        else:
+        raw_id = row["item"].split("/")[-1]  # Wikidata QID
+        if raw_id in ids:
             continue
+        ids.add(raw_id)
         lat = lon = None
         if not (coord := row.get("coord")):
             continue
@@ -100,7 +112,15 @@ with open(data_csv, encoding="utf-8-sig") as f:
         lon = m.group(1)
         lat = m.group(2)
         elevation = row["elevation"] or None
-        extract = extracts.get(raw_id, "").replace("\n", "")
+        pedia_entry = pedia.get(raw_id)
+        if not pedia_entry:
+            print(f"No extract found for {raw_id}", file=sys.stderr)
+            continue
+        timestamp = pedia_entry.get("timestamp")
+        formatted_timestamp = datetime.fromisoformat(timestamp).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+        extract = pedia_entry.get("extract")
         label = itemLabel = row["itemLabel"]
         if m := re.search(r"^(.*?)[（\(]", itemLabel):
             label = m.group(1).strip()
@@ -110,13 +130,13 @@ with open(data_csv, encoding="utf-8-sig") as f:
                 {
                     "raw_id": raw_id,
                     "raw_type": "山",
-                    "name": item["name"].strip("「」"),
+                    "name": item["name"],
                     "kana": item["kana"],
                     "lat": lat,
                     "lon": lon,
                     "elevation": elevation,
                     "z_min": None,
-                    "last_updated_at": None,
+                    "last_updated_at": formatted_timestamp,
                 }
             )
 
