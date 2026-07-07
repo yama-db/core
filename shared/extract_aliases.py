@@ -138,11 +138,11 @@ if __name__ == "__main__":
         with open(tsv_file, "r", encoding="utf-8-sig") as f:
             reader = csv.DictReader(f, delimiter="\t")
             writer = csv.DictWriter(
-                sys.stdout, fieldnames=["raw_remote_id", "name", "kana"]
+                sys.stdout, fieldnames=["raw_id", "name", "kana"]
             )
             writer.writeheader()
             for row in reader:
-                raw_remote_id = row["raw_remote_id"]
+                raw_id = row["raw_id"]
                 name = row["name"]
                 kana = json.loads(row["kana"])["hira"]
                 if not kana:
@@ -150,7 +150,7 @@ if __name__ == "__main__":
                 for n, k in extract_aliases(name, kana):
                     writer.writerow(
                         {
-                            "raw_remote_id": raw_remote_id,
+                            "raw_id": raw_id,
                             "name": n,
                             "kana": k,
                         }
