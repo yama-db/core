@@ -4,9 +4,8 @@
 import json
 import sys
 from argparse import ArgumentParser
-from pathlib import Path
 
-import mysql.connector
+from shared import db_util
 
 # コマンドライン引数の解析
 parser = ArgumentParser(description="行政区域境界のGeoJSONファイルをDBに登録")
@@ -29,46 +28,17 @@ max_count = args.max_count
 truncate = args.truncate
 
 # MySQL接続の確立
-try:
-    my_cnf = Path(sys.prefix).parent / ".my.cnf"
-    conn = mysql.connector.connect(
-        option_files=str(my_cnf),
-        autocommit=False,
-    )
-    cursor = conn.cursor(dictionary=True)
-except mysql.connector.Error as e:
-    print(f"MySQL Connection Error: {e}")
-    sys.exit(1)
-
-# テーブルを空にする
-if truncate:
-    try:
-        cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
-        cursor.execute(f"TRUNCATE TABLE {table_name}")
-        cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
-        conn.commit()
-        print(f"Table {table_name} truncated.")
-    except mysql.connector.Error as e:
-        print(f"MySQL Error during truncation: {e}")
-        sys.exit(1)
-
-
-def insert_geom_data(values):
-    try:
-        cursor.executemany(
-            f"""
-            INSERT IGNORE INTO {table_name} (jis_code, geom) VALUES
-            (%s, ST_GeomFromGeoJSON(%s))
-            """,
-            values,
-        )
-        conn.commit()
-    except mysql.connector.Error as e:
-        print(f"MySQL Error during insertion: {e}")
-        conn.rollback()
-
+conn = None
+cursor = None
+success = False
 
 try:
+    conn, cursor = db_util.db_open()
+
+    # テーブルを空にする
+    if truncate:
+        db_util.truncate_table(cursor, table_name)
+
     with open(args.geojson_file, "r", encoding="utf-8") as f:
         data = json.load(f)
 
@@ -77,26 +47,51 @@ try:
     for feature in data["features"]:
         properties = feature["properties"]
         jis_code = properties["N03_007"]
-        geometry_json = json.dumps(feature["geometry"])
-        values.append((jis_code, geometry_json))
-        count += 1
-        if count % max_count == 0:
-            insert_geom_data(values)
+        geometry = feature["geometry"]
+        geometry_type = geometry["type"]
+        if geometry_type == "MultiPolygon":
+            for coordinates in geometry["coordinates"]:
+                geometry_json = json.dumps({
+                    "type": "Polygon",
+                    "coordinates": coordinates,
+                })
+                values.append((jis_code, geometry_json))
+                count += 1
+        elif geometry_type == "Polygon":
+            geometry_json = json.dumps(geometry)
+            values.append((jis_code, geometry_json))
+            count += 1
+        else:
+            continue
+
+        if len(values) >= max_count:
+            cursor.executemany(
+                f"""
+                INSERT IGNORE INTO `{table_name}` (jis_code, geom) VALUES
+                (%s, ST_GeomFromGeoJSON(%s))
+                """,
+                values,
+            )
             print(f"Inserted {count} rows into {table_name}")
             values = []
 
     if values:
-        insert_geom_data(values)
+        cursor.executemany(
+            f"""
+            INSERT IGNORE INTO `{table_name}` (jis_code, geom) VALUES
+            (%s, ST_GeomFromGeoJSON(%s))
+            """,
+            values,
+        )
         print(f"Inserted {count} rows into {table_name}")
 
-except FileNotFoundError:
-    print(f"File not found: {geojson_file}")
-except json.JSONDecodeError as e:
-    print(f"Error parsing JSON file: {e}")
-except KeyError as e:
-    print(f"Missing expected key in GeoJSON data: {e}")
+    success = True
 
-cursor.close()
-conn.close()
+except Exception as err:
+    print(f"Error during DB session: {err}", file=sys.stderr)
+    raise
+finally:
+    if conn or cursor:
+        db_util.db_close(conn, cursor, success=success)
 
 # __END__
