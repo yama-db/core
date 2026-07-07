@@ -7,8 +7,8 @@ from pathlib import Path
 import mysql.connector
 
 
-def db_open():
-    my_cnf = Path(sys.prefix).parent / ".my.cnf"
+def db_open(config_file = ".my.cnf"):
+    my_cnf = Path(sys.prefix).parent / config_file
     conn = mysql.connector.connect(
         option_files=str(my_cnf),
         option_groups=["client"],
