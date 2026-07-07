@@ -4,11 +4,8 @@
 import csv
 import sys
 from argparse import ArgumentParser
-from pathlib import Path
 
-import mysql.connector
-
-from shared import tile_utils
+from shared import tile_utils, db_util
 
 parser = ArgumentParser(description="統一POIテーブルを初期化")
 parser.add_argument("table_name", choices=["mountain_pois"], help="統一POIテーブル名")
@@ -17,43 +14,27 @@ parser.add_argument(
     "-t", "--truncate", action="store_true", help="テーブルを空にしてから登録"
 )
 args = parser.parse_args()
-csv_file = args.csv_file
 table_name = args.table_name
+csv_file = args.csv_file
 truncate = args.truncate
 
-category_id = "mountain"
-display_name = "山"
-
 # MySQL接続の確立
-try:
-    my_cnf = Path(sys.prefix).parent / ".my.cnf"
-    conn = mysql.connector.connect(
-        option_files=str(my_cnf),
-        option_groups=["client"],
-        autocommit=False,
-    )
-    cursor = conn.cursor(dictionary=True)
-except mysql.connector.Error as e:
-    print(f"MySQL Error: {e}")
-    sys.exit(1)
-
-if truncate:
-    try:
-        cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
-        cursor.execute(f"TRUNCATE TABLE {table_name}")
-        cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
-        conn.commit()
-        print(f"Table {table_name} truncated.")
-    except mysql.connector.Error as e:
-        print(f"MySQL Error during truncation: {e}")
-        sys.exit(1)
+conn = None
+cursor = None
+success = False
 
 try:
+    conn, cursor = db_util.db_open()
+
+    if truncate:
+        db_util.truncate_table(cursor, table_name)
+
+    values = []
     with open(csv_file, "r", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
-        values = []
         for i, row in enumerate(reader):
-            assert int(row["id"]) == i + 1, f"IDが連番でない: {row['id']}"
+            if int(row["id"]) != i + 1:
+                raise ValueError(f"IDが連番でない: {row['id']}")
             is_used = row["is_used"]
             name = row["name"]
             kana = row["kana"]
@@ -79,16 +60,14 @@ try:
         """,
         values,
     )
-    conn.commit()
     print(f"Inserted {cursor.rowcount} rows into {table_name}")
+    success = True
 
-except FileNotFoundError:
-    print(f"CSVファイルが見つかりません: {csv_file}")
-except mysql.connector.Error as e:
-    print(f"MySQL Error during insertion: {e}")
-    conn.rollback()
-
-cursor.close()
-conn.close()
+except Exception as err:
+    print(f"Error during DB session: {err}", file=sys.stderr)
+    raise
+finally:
+    if conn or cursor:
+        db_util.db_close(conn, cursor, success=success)
 
 # __END__

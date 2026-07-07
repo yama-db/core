@@ -52,7 +52,7 @@ try:
                 JOIN administrative_regions AS r USING (jis_code)
                 WHERE m.id = %s
                 ORDER BY r.jis_code
-            ) AS t
+            ) AS t;
             """,
             (config.EPS, id),
         )
