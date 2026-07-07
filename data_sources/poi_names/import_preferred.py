@@ -53,7 +53,7 @@ try:
             (display_name, mountain_id),
         )
 
-    # unified_pois の代表名称を更新（山域名は除外）
+    # mountain_pois の代表名称を更新（山域名は除外）
     cursor.execute(
         """
         UPDATE mountain_pois AS m

@@ -86,22 +86,6 @@ try:
 
     # 優先名称の設定
     cursor.execute(
-        """
-        CREATE TEMPORARY TABLE min_distances AS
-        SELECT 
-            pl.mountain_id,
-            MIN(pl.linked_distance) AS min_distance
-        FROM poi_links AS pl
-        JOIN poi_names AS pn ON pl.source_uuid = pn.source_uuid
-        WHERE pn.name_type = 'MAIN'
-            AND pn.poi_kana IS NOT NULL
-            AND pn.poi_kana <> ''
-        GROUP BY pl.mountain_id
-        """,
-    )
-    cursor.execute("ALTER TABLE min_distances ADD PRIMARY KEY (mountain_id)")
-
-    cursor.execute(
         f"""
         CREATE TEMPORARY TABLE best_sources AS
         SELECT 
@@ -118,11 +102,9 @@ try:
             FROM poi_links AS pl
             JOIN poi_names AS pn ON pl.source_uuid = pn.source_uuid
             JOIN information_sources AS isrc ON pl.source_id = isrc.id
-            JOIN min_distances AS md ON pl.mountain_id = md.mountain_id
             WHERE pn.name_type = 'MAIN'
                 AND pn.poi_kana IS NOT NULL
                 AND pn.poi_kana <> ''
-                AND pl.linked_distance <= GREATEST({config.EPS}, md.min_distance)
         ) AS sub
         WHERE sub.rank_idx = 1
         """,
