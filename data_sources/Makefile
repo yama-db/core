@@ -1,6 +1,6 @@
 # Makefile for data_sources
 
-POIDIRS := gsi_vtexp gsi_dm25k yamap yamareco wikidata legacy book
+POIDIRS := gsi_vtexp gsi_dm25k yamap yamareco wikidata legacy book_web
 
 all:
 	@for dir in $(POIDIRS); do \
