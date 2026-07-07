@@ -6,11 +6,14 @@ TABLE_NAME := stg_gsi_gcp_pois
 all: dist/gsi_gcp.csv
 	@echo "All required raw files are present."
 
-dist/gsi_gcp.csv: xml2csv.py work/.extracted
+dist:
+	mkdir -p $@
+
+dist/gsi_gcp.csv: xml2csv.py work/.extracted | dist
 	python3 xml2csv.py work/FG-GML-*.xml > $@
 
 work/.extracted:
-	./extract.sh
+	./extract_xml.sh
 	touch $@
 
 import: dist/gsi_gcp.csv

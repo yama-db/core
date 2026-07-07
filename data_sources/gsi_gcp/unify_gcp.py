@@ -39,9 +39,7 @@ try:
     conn, cursor = db_util.db_open()
 
     cursor.execute(
-        f"""
-        SELECT DISTINCT id FROM information_sources WHERE source_table = %s
-        """,
+        "SELECT DISTINCT id FROM information_sources WHERE source_table = %s",
         (table_name,),
     )
     if not (rows := cursor.fetchall()):
@@ -57,11 +55,7 @@ try:
 
     # 現在、登録されているリンクの最大値
     cursor.execute(
-        """
-        SELECT COALESCE(MAX(mountain_id), 0) AS max_id
-        FROM poi_links
-        WHERE source_id = %s
-        """,
+        "SELECT COALESCE(MAX(mountain_id), 0) AS max_id FROM poi_links WHERE source_id = %s",
         (source_id,),
     )
     max_id = cursor.fetchone()["max_id"]
@@ -94,8 +88,17 @@ try:
         )
         result = cursor.fetchone()
         if not result:
-            print(f"No GCP POI found within {radius}m for mountain_id {id}", file=sys.stderr)
+            print(
+                f"No GCP POI found within {radius}m for mountain_id {id}",
+                file=sys.stderr,
+            )
+            z_min = 13  # デフォルトの最小表示Zレベルを設定
+            cursor.execute(
+                "UPDATE mountain_pois SET z_min = %s WHERE id = %s",
+                (z_min, id),
+            )
             continue
+
         source_uuid = result["source_uuid"]
 
         # バッファ内で最小のズームレベルを取得
