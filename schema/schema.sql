@@ -89,6 +89,7 @@ CREATE TABLE stg_book_web_pois (
     source_id INT NOT NULL COMMENT '情報源ID',
     raw_id VARCHAR(100) COLLATE ascii_bin NOT NULL COMMENT 'データ識別子',
     raw_type VARCHAR(100) NOT NULL COMMENT 'データ種別',
+    mountain_id INT NOT NULL COMMENT '統合ID',
     names_json JSON NOT NULL COMMENT '山名・よみ',
     geom POINT /*!80003 SRID 4326 */ COMMENT '地理座標',
     lat DECIMAL(9, 6) GENERATED ALWAYS AS (
@@ -182,7 +183,7 @@ CREATE TABLE poi_address_map (
     CONSTRAINT fk_poi_address_region
     FOREIGN KEY (jis_code) REFERENCES administrative_regions (jis_code)
     ON DELETE RESTRICT
-) COMMENT '統合POIと行政区画の紐付け';
+) COMMENT '統合POIと行政区画の関連付け';
 
 CREATE TABLE mountain_records (
     id INT AUTO_INCREMENT PRIMARY KEY COMMENT '山行記録ID',
@@ -200,7 +201,7 @@ CREATE TABLE mountain_records (
 CREATE TABLE visited_mountains (
     mountain_record_id INT NOT NULL COMMENT '山行記録ID',
     mountain_id INT NOT NULL COMMENT '統合ID',
-    climb_date DATE NOT NULL COMMENT '登頂日',
+    climb_date DATE COMMENT '登頂日',
     climb_order INT NOT NULL COMMENT '登頂順',
     PRIMARY KEY (mountain_record_id, mountain_id),
     CONSTRAINT fk_visited_mountains_record
