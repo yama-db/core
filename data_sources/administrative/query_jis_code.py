@@ -16,7 +16,7 @@ writer.writeheader()
 
 url = "https://query.wikidata.org/sparql"
 headers = {
-    "User-Agent": "YamaDBProject/1.0 (contact: anineco@gmail.com)",
+    "User-Agent": "Mozilla/5.0 (compatible; MyCrawler/1.0; +mailto:anineco@gmail.com)",
     "Accept": "application/sparql-results+json",
 }
 query = """
