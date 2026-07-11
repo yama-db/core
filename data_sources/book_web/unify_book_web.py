@@ -46,6 +46,7 @@ try:
         print(f"Existing links for {table_name} have been deleted.", file=sys.stderr)
 
     # 統合POIとデータソースのリンク作成
+    # FIXME: names_json->>'$[0].type' is assumed to be 'MAIN'.
     cursor.execute(
         f"""
         SELECT

@@ -3,7 +3,7 @@
 
 TABLE_NAME := stg_wikidata_pois
 
-all: archive/wikidata.csv archive/wikipedia.csv dist/wikidata.csv
+all: archive/wikidata.csv archive/wikipedia.csv dist/wikidata.tsv
 
 archive dist:
 	mkdir -p $@
@@ -14,14 +14,14 @@ archive/wikidata.csv: query_wikidata.py | archive
 archive/wikipedia.csv: archive/wikidata.csv query_wikipedia.py | archive
 	python3 query_wikipedia.py $< > $@
 
-dist/wikidata.csv: archive/wikidata.csv archive/wikipedia.csv convert_wikidata.py | dist
+dist/wikidata.tsv: archive/wikidata.csv archive/wikipedia.csv convert_wikidata.py | dist
 	python3 convert_wikidata.py archive/wikidata.csv archive/wikipedia.csv | \
 	sed -e '/,西沢渓谷,/d' -e '/,大鰐テレビ中継局,/d' > $@
 
-import: dist/wikidata.csv ../import_pois.py | dist
+import: dist/wikidata.tsv ../import_pois.py
 	python3 ../import_pois.py --truncate $(TABLE_NAME) $<
 
-unify: dist/wikidata.csv ../unify_pois.py | dist
+unify: ../unify_pois.py
 	python3 ../unify_pois.py --truncate $(TABLE_NAME)
 
 clean: ;

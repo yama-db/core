@@ -12,9 +12,9 @@ from pathlib import Path
 from shared import db_util, generate_source_uuid, tile_utils
 
 # コマンドライン引数の解析
-parser = ArgumentParser(description="POIのCSVファイルをDBに登録")
+parser = ArgumentParser(description="POIのTSVファイルをDBに登録")
 parser.add_argument("table_name", help="登録先のテーブル名")
-parser.add_argument("csv_file", help="POIのCSVファイル・パス")
+parser.add_argument("tsv_file", help="POIのTSVファイル・パス")
 parser.add_argument(
     "-m",
     "--max-count",
@@ -26,7 +26,7 @@ parser.add_argument(
     "-t", "--truncate", action="store_true", help="登録前にテーブルを空にする"
 )
 args = parser.parse_args()
-csv_file = args.csv_file
+tsv_file = args.tsv_file
 table_name = args.table_name
 max_count = args.max_count
 truncate = args.truncate
@@ -55,11 +55,10 @@ try:
     if truncate:
         db_util.truncate_table(cursor, table_name)
 
-    # CSVファイルの読み込み
-    with open(csv_file, "r", encoding="utf-8-sig") as f:
-        suffix = Path(csv_file).suffix.lower()
-        delimiter = "\t" if suffix == ".tsv" else ","
-        reader = csv.DictReader(f, delimiter=delimiter)
+    # TSVファイルの読み込み
+    with open(tsv_file, "r", encoding="utf-8-sig") as f:
+        suffix = Path(tsv_file).suffix.lower()
+        reader = csv.DictReader(f, delimiter="\t")
         count = 0
         values = []
         for row in reader:
@@ -67,11 +66,6 @@ try:
             if not raw_id:  # 別名はスキップ
                 continue
             uuid = generate_source_uuid(table_name, raw_id)
-            name = row["name"]
-            kana = row["kana"]
-            names_json = json.dumps(
-                [{"name": name, "kana": kana}], ensure_ascii=False
-            )
             lon = row["lon"]
             lat = row["lat"]
             if lon and lat:
@@ -85,7 +79,7 @@ try:
                     uuid.bytes,
                     raw_id,
                     row["raw_type"],
-                    names_json,
+                    row["names_json"],
                     coord,
                     row["elevation"] or None,
                     x_z18,

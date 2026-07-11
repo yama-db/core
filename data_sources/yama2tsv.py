@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# YAMAP/Yamareco TSVファイルをCSV形式に変換して出力するスクリプト
+# YAMAP/Yamareco TSVファイルをTSV形式に変換して出力するスクリプト
 
 import csv
 import html
@@ -13,15 +13,9 @@ import jaconv
 import regex
 from shared import db_util, extract_aliases
 
-parser = ArgumentParser(description="YAMAP/YamarecoのTSVファイルを変換してCSV出力")
-parser.add_argument(
-    "source",
-    choices=["yamap", "yamareco"],
-    help="データソース（yamap または yamareco）を指定",
-)
+parser = ArgumentParser(description="YAMAP/YamarecoのTSVファイルを変換してTSV出力")
 parser.add_argument("tsv_file", help="TSVファイルのパス")
 args = parser.parse_args()
-source = args.source
 tsv_file = args.tsv_file
 
 # MySQL接続の確立
@@ -35,8 +29,7 @@ try:
     fieldnames = [
         "raw_id",
         "raw_type",
-        "name",
-        "kana",
+        "names_json",
         "lat",
         "lon",
         "elevation",
@@ -46,8 +39,7 @@ try:
 
     with open(tsv_file, "r", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f, delimiter="\t")
-        writer = csv.DictWriter(sys.stdout, fieldnames=fieldnames)
-        writer.writeheader()
+        print("\t".join(fieldnames))
         for row in reader:
             name = html.unescape(row["name"].strip())
             if name.startswith("（") and name.endswith("）"):
@@ -60,7 +52,7 @@ try:
             lon = float(row["lon"])
             lat = float(row["lat"])
             if (elevation := row["elevation"]) == "NULL":
-                elevation = None
+                elevation = ""
             if lon and lat:
                 if not (abs(lon) <= 180.0 and abs(lat) <= 90.0):
                     print(
@@ -90,20 +82,18 @@ try:
                     )
                     continue
 
-            for n, k in extract_aliases(name, kana):
-                writer.writerow(
-                    {
-                        "raw_id": row["raw_id"],
-                        "raw_type": row["raw_type"],
-                        "name": n,
-                        "kana": k,
-                        "lat": row["lat"],
-                        "lon": row["lon"],
-                        "elevation": elevation,
-                        "z_min": None,
-                        "last_updated_at": row["last_updated_at"],
-                    }
-                )
+            names_json = extract_aliases(name, kana)
+            output_row = [
+                row["raw_id"],
+                row["raw_type"],
+                json.dumps(names_json, separators=(",", ":"), ensure_ascii=False),
+                row["lat"],
+                row["lon"],
+                elevation,
+                "",
+                row["last_updated_at"],
+            ]
+            print("\t".join(output_row))
 
     success = True
 

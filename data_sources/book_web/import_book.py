@@ -70,9 +70,7 @@ try:
                 raw_id = row["raw_id"]
                 raw_type = "山"  # FIXME:書籍のPOIはすべて山として扱う
                 uuid = generate_source_uuid(f"{table_name}_{source_id}", raw_id)
-                aliases = extract_aliases(row["name"], row["kana"])
-                data = [{"name": name, "kana": kana} for name, kana in aliases]
-                names_json = json.dumps(data, ensure_ascii=False)
+                names_json = extract_aliases(row["name"], row["kana"])
                 values.append(
                     (
                         uuid.bytes,
@@ -80,7 +78,7 @@ try:
                         raw_id,
                         raw_type,
                         row["mountain_id"] or None,
-                        names_json,
+                        json.dumps(names_json, separators=(",", ":"), ensure_ascii=False),
                         row["elevation"] or None,
                     )
                 )

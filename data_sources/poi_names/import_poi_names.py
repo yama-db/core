@@ -68,16 +68,16 @@ try:
             j.poi_name,
             j.poi_name AS poi_name_normalized,
             j.poi_kana,
-            IF(j.idx = 1, 'MAIN', 'ALIAS') AS name_type,
+            j.poi_type AS name_type,
             0 AS is_preferred
         FROM `{table_name}` AS s
         JOIN poi_links AS p ON s.source_uuid = p.source_uuid
         JOIN JSON_TABLE(
             s.names_json,
             '$[*]' COLUMNS (
-                idx FOR ORDINALITY,
                 poi_name VARCHAR(255) PATH '$.name',
-                poi_kana VARCHAR(255) PATH '$.kana'
+                poi_kana VARCHAR(255) PATH '$.kana',
+                poi_type VARCHAR(255) PATH '$.type'
             )
         ) AS j
         WHERE j.poi_kana IS NOT NULL AND j.poi_kana <> ''

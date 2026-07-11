@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import csv
+import json
 import re
 import sys
 from argparse import ArgumentParser
@@ -65,8 +66,8 @@ def extract_name_and_kana(extract: str, label: str) -> List[Dict[str, str]]:
     if kana and (m := re.match(r"(.*)あたま/かしら", kana)):
         kana = jaconv.kata2hira(m.group(1).strip())
         return [
-            {"name": name, "kana": kana + "あたま"},
-            {"name": name, "kana": kana + "かしら"},
+            {"name": name, "kana": kana + "あたま", "type": "ALIAS"},
+            {"name": name, "kana": kana + "かしら", "type": "ALIAS"},
         ]
 
     names = name.replace("または", "、").split(
@@ -79,7 +80,9 @@ def extract_name_and_kana(extract: str, label: str) -> List[Dict[str, str]]:
             kanas.append(hira)
     if not kanas:
         kanas = [""]
-    return [{"name": na, "kana": ka} for na, ka in product(names, kanas)]
+    return [
+        {"name": na, "kana": ka, "type": "ALIAS"} for na, ka in product(names, kanas)
+    ]
 
 
 with open(data_csv, encoding="utf-8-sig") as f:
@@ -87,16 +90,14 @@ with open(data_csv, encoding="utf-8-sig") as f:
     fieldnames = [
         "raw_id",
         "raw_type",
-        "name",
-        "kana",
+        "names_json",
         "lat",
         "lon",
         "elevation",
         "z_min",
         "last_updated_at",
     ]
-    writer = csv.DictWriter(sys.stdout, fieldnames=fieldnames)
-    writer.writeheader()
+    print("\t".join(fieldnames))
     ids = set()
     for row in reader:
         raw_id = row["item"].split("/")[-1]  # Wikidata QID
@@ -111,7 +112,7 @@ with open(data_csv, encoding="utf-8-sig") as f:
             continue
         lon = m.group(1)
         lat = m.group(2)
-        elevation = row["elevation"] or None
+        elevation = row["elevation"] or ""
         pedia_entry = pedia.get(raw_id)
         if not pedia_entry:
             print(f"No extract found for {raw_id}", file=sys.stderr)
@@ -125,19 +126,17 @@ with open(data_csv, encoding="utf-8-sig") as f:
         if m := re.search(r"^(.*?)[（\(]", itemLabel):
             label = m.group(1).strip()
         names_json = extract_name_and_kana(extract, label)
-        for item in names_json:
-            writer.writerow(
-                {
-                    "raw_id": raw_id,
-                    "raw_type": "山",
-                    "name": item["name"],
-                    "kana": item["kana"],
-                    "lat": lat,
-                    "lon": lon,
-                    "elevation": elevation,
-                    "z_min": None,
-                    "last_updated_at": formatted_timestamp,
-                }
-            )
+        names_json[0]["type"] = "MAIN"  # 最初の種別を MAIN に設定
+        row = [
+            raw_id,
+            "山",
+            json.dumps(names_json, separators=(",", ":"), ensure_ascii=False),
+            lat,
+            lon,
+            elevation,
+            "",
+            formatted_timestamp,
+        ]
+        print("\t".join(row))
 
 # __END__

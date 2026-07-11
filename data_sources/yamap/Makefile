@@ -4,16 +4,16 @@
 SOURCE := yamap
 TABLE_NAME := stg_$(SOURCE)_pois
 
-all: dist/$(SOURCE).csv
+all: dist/$(SOURCE).tsv
 
-dist/$(SOURCE).csv: archive/$(SOURCE).tsv ../tsv2csv.py ../../shared/extract_aliases.py
-	python3 ../tsv2csv.py $(SOURCE) $< > $@
+dist/$(SOURCE).tsv: archive/$(SOURCE).tsv ../yama2tsv.py ../../shared/extract_aliases.py
+	python3 ../yama2tsv.py $< > $@
 
 archive/$(SOURCE).tsv:
 	@echo "please run the crawler to generate '$@'."
 	@exit 1
 
-import: dist/$(SOURCE).csv
+import: dist/$(SOURCE).tsv
 	python3 ../import_pois.py --truncate $(TABLE_NAME) $<
 
 unify:

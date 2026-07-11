@@ -3,17 +3,23 @@
 
 TABLE_NAME := stg_gsi_vtexp_pois
 
-all: dist/gsi_vtexp.csv
+all: dist/gsi_vtexp.tsv
 
-dist/gsi_vtexp.csv: extract_features.py raw/gsi_vtexp_corrections.csv archive/.downloaded
+dist work:
+	mkdir -p $@
+
+work/gsi_vtexp.tsv: extract_features.py archive/.downloaded | work
 	python3 extract_features.py archive/tiles/ > $@
+
+dist/gsi_vtexp.tsv: raw/gsi_vtexp_corrections.csv work/gsi_vtexp.tsv apply_corrections.py | dist
+	python3 apply_corrections.py $(word 1,$^) < $(word 2,$^) > $@
 
 archive/.downloaded:
 	@echo "Please run './get_tiles.sh' to download VTEXP tiles."
 	@echo "It may take a long time and a large amount of disk space."
 	@exit 1
 
-import: dist/gsi_vtexp.csv
+import: dist/gsi_vtexp.tsv
 	python3 ../import_pois.py --truncate $(TABLE_NAME) $<
 
 unify:

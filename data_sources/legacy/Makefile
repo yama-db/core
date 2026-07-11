@@ -4,12 +4,12 @@
 SOURCE := legacy
 TABLE_NAME := stg_$(SOURCE)_pois
 
-all: dist/$(SOURCE).csv
+all: dist/$(SOURCE).tsv
 
-dist/$(SOURCE).csv: dump.py
+dist/$(SOURCE).tsv: dump.py
 	python3 dump.py > $@
 
-import: dist/$(SOURCE).csv
+import: dist/$(SOURCE).tsv
 	python3 ../import_pois.py --truncate $(TABLE_NAME) $<
 
 unify:

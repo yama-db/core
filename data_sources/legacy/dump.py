@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import csv
+import json
 import sys
 
 from shared import db_util
@@ -17,16 +17,14 @@ try:
     fieldnames = [
         "raw_id",
         "raw_type",
-        "name",
-        "kana",
+        "names_json",
         "lat",
         "lon",
         "elevation",
         "z_min",
         "last_updated_at",
     ]
-    writer = csv.DictWriter(sys.stdout, fieldnames=fieldnames)
-    writer.writeheader()
+    print("\t".join(fieldnames))
 
     raw_type_list = [
         "等高線",
@@ -52,19 +50,18 @@ try:
     )
     for row in cursor.fetchall():
         level = row["level"]
-        writer.writerow(
-            {
-                "raw_id": row["raw_id"],
-                "raw_type": raw_type_list[level & 7],
-                "name": row["name"],
-                "kana": row["kana"],
-                "lat": row["lat"],
-                "lon": row["lon"],
-                "elevation": row["alt"],
-                "z_min": z_min_list[(level >> 3) & 7],
-                "last_updated_at": None,
-            }
-        )
+        names_json = [{"name": row["name"], "kana": row["kana"], "type": "MAIN"}]
+        row = [
+            str(row["raw_id"]),
+            raw_type_list[level & 7],
+            json.dumps(names_json, separators=(",", ":"), ensure_ascii=False),
+            str(row["lat"]),
+            str(row["lon"]),
+            str(row["alt"]),
+            str(z_min_list[(level >> 3) & 7]),
+            "",
+        ]
+        print("\t".join(row))
 
     success = True
 

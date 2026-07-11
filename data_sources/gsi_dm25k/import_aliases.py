@@ -11,11 +11,11 @@ from argparse import ArgumentParser
 from shared import db_util
 
 # コマンドライン引数の解析
-parser = ArgumentParser(description="POIのCSVファイルをDBに登録")
+parser = ArgumentParser(description="POIのTSVファイルをDBに登録")
 parser.add_argument(
     "table_name", choices=["stg_gsi_dm25k_pois"], help="登録先のテーブル名"
 )
-parser.add_argument("csv_file", help="POIのCSVファイル・パス")
+parser.add_argument("tsv_file", help="POIのTSVファイル・パス")
 parser.add_argument(
     "-r",
     "--radius",
@@ -35,14 +35,12 @@ success = False
 try:
     conn, cursor = db_util.db_open()
 
-    with open(args.csv_file, "r", encoding="utf-8-sig") as f:
-        reader = csv.DictReader(f)
+    with open(args.tsv_file, "r", encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f, delimiter="\t")
         for row in reader:
-            alias_name = row["name"]
-            alias_kana = row["kana"]
-            alias = json.dumps(
-                {"name": alias_name, "kana": alias_kana}, ensure_ascii=False
-            )
+            names_str = row["names_json"]
+            names_json = json.loads(names_str)
+            alias_name = names_json[0]["name"]
 
             # 位置情報から検索
             lon = row["lon"]
@@ -52,10 +50,12 @@ try:
                     f"Skipping {alias_name} due to missing coordinates", file=sys.stderr
                 )
                 continue
-            assert (
-                abs(float(lon)) <= 180.0
-            ), f"Error: Out of range longitude value: {lon}"
-            assert abs(float(lat)) <= 90.0, f"Error: Out of range latitude value: {lat}"
+            if not (-180.0 <= float(lon) <= 180.0):
+                print(f"Error: Out of range longitude value: {lon}", file=sys.stderr)
+                continue
+            if not (-90.0 <= float(lat) <= 90.0):
+                print(f"Error: Out of range latitude value: {lat}", file=sys.stderr)
+                continue
             coord = f"POINT({lon} {lat})"
             cursor.execute(
                 f"""
@@ -97,7 +97,7 @@ try:
                 WHERE source_uuid = %s
                     AND NOT JSON_CONTAINS(names_json, CAST(%s AS JSON), '$')
                 """,
-                (alias, result_uuid, alias),
+                (names_str, result_uuid, names_str),
             )
             print(
                 f"Registered alias for: {alias_name} -> {result_name}", file=sys.stderr

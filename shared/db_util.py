@@ -11,7 +11,7 @@ def db_open(config_file = ".my.cnf"):
     my_cnf = Path(sys.prefix).parent / config_file
     conn = mysql.connector.connect(
         option_files=str(my_cnf),
-        option_groups=["client"],
+        option_groups=["client", "yama_db"],
         autocommit=False,
     )
     cursor = conn.cursor(dictionary=True)

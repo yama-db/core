@@ -58,8 +58,8 @@ CREATE TABLE _stg_template_pois (
 
 /* names_jsonの例：
 [
-    {"name": "羊蹄山", "kana": "ようていざん"},
-    {"name": "蝦夷富士", "kana": "えぞふじ"}
+    {"name": "羊蹄山", "kana": "ようていざん", "type": "MAIN"},
+    {"name": "蝦夷富士", "kana": "えぞふじ", "type": "ALIAS"},
 ]
 */
 
@@ -164,7 +164,9 @@ CREATE TABLE poi_names (
     poi_name VARCHAR(255) NOT NULL COMMENT '名称',
     poi_name_normalized VARCHAR(255) NOT NULL COMMENT '検索用正規化名称',
     poi_kana VARCHAR(255) NOT NULL COMMENT 'よみがな',
-    name_type ENUM('MAIN', 'ALIAS') NOT NULL DEFAULT 'MAIN' COMMENT '名称種別',
+    name_type ENUM(
+        'MAIN', 'AREA', 'SUB_PEAK', 'ALIAS'
+    ) NOT NULL DEFAULT 'MAIN' COMMENT '名称種別',
     is_preferred BOOLEAN NOT NULL DEFAULT FALSE COMMENT '代表名称フラグ',
     FOREIGN KEY (mountain_id) REFERENCES mountain_pois (id),
     FOREIGN KEY (source_id) REFERENCES information_sources (id),
