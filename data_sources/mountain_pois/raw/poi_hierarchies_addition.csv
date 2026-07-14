@@ -1,5 +1,5 @@
 parent_id,parent_name,child_id,child_name,relation_type,is_representative
-263,筑波山,20319,男体山,AREA_TO_PEAK,0
+1193,筑波山,20319,男体山,AREA_TO_PEAK,0
 1248,谷川岳,17839,トマノ耳,AREA_TO_PEAK,0
 1280,富士山,1530,白山岳,AREA_TO_PEAK,0
 1280,富士山,19113,久須志岳,AREA_TO_PEAK,0
