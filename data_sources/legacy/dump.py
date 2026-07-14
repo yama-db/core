@@ -39,18 +39,43 @@ try:
 
     z_min_list = [13, 13, 12, 11, 10, 9, 8, 8]
 
+    TYPE_MAP = {
+        0: 'AREA',
+        1: 'MAIN',
+        2: 'ALIAS'
+    }
+
     cursor.execute(
         """
-        SELECT g.id AS raw_id, s.name, s.kana, lat, lon, alt, level
+        SELECT
+            g.id AS raw_id,
+            (
+                SELECT JSON_ARRAYAGG(
+                    JSON_OBJECT(
+                        "name", s.name,
+                        "kana", s.kana,
+                        "type", s.type
+                    )
+                )
+                FROM sanmei AS s
+                WHERE s.id = g.id
+            ) AS names_json,
+            g.lat,
+            g.lon,
+            g.alt,
+            g.level
         FROM geom AS g
-        RIGHT JOIN sanmei AS s USING (id)
-        WHERE g.id IS NOT NULL AND type >= 1
-        ORDER BY g.id, type
+        ORDER BY g.id
         """,
     )
     for row in cursor.fetchall():
         level = row["level"]
-        names_json = [{"name": row["name"], "kana": row["kana"], "type": "MAIN"}]
+        names_json = json.loads(row["names_json"])
+        for item in names_json:
+            current_type = item.get("type")
+            item["type"] = TYPE_MAP.get(current_type, 'UNKNOWN')
+        names_json.sort(key=lambda item: item["type"] != 'MAIN')
+
         row = [
             str(row["raw_id"]),
             raw_type_list[level & 7],
