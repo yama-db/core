@@ -14,6 +14,7 @@ fieldnames = [
     "nativeLabel",
     "kanaQualifier",
     "wikipedia_url",
+    "last_updated",
 ]
 writer = csv.DictWriter(sys.stdout, fieldnames=fieldnames)
 writer.writeheader()
@@ -25,12 +26,13 @@ headers = {
 }
 query = """
     SELECT DISTINCT
-        ?item ?itemLabel ?coord ?elevation ?nativeLabel ?kanaQualifier ?wikipedia_url
+        ?item ?itemLabel ?coord ?elevation ?nativeLabel ?kanaQualifier ?wikipedia_url ?last_updated
     WHERE {
         ?item wdt:P31 wd:Q8502 .
         ?item wdt:P17 wd:Q17 .
         ?wikipedia_url schema:about ?item ;
                        schema:isPartOf <https://ja.wikipedia.org/> .
+        ?item schema:dateModified ?last_updated .
         OPTIONAL { ?item wdt:P625 ?coord . }
         OPTIONAL { ?item wdt:P2044 ?elevation . }
         OPTIONAL {
