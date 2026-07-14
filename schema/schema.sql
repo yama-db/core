@@ -38,6 +38,7 @@ CREATE TABLE _stg_template_pois (
     source_uuid BINARY(16) PRIMARY KEY COMMENT 'UUID v5',
     raw_id VARCHAR(100) COLLATE ascii_bin NOT NULL COMMENT 'データ識別子',
     raw_type VARCHAR(100) NOT NULL COMMENT 'データ種別',
+    mountain_id INT COMMENT '統合ID',
     names_json JSON NOT NULL COMMENT '山名・よみ',
     geom POINT /*!80003 SRID 4326 */ NOT NULL COMMENT '地理座標',
     lat DECIMAL(9, 6) GENERATED ALWAYS AS (
@@ -110,6 +111,7 @@ CREATE TABLE stg_book_web_pois (
 CREATE TABLE mountain_pois (
     id INT AUTO_INCREMENT PRIMARY KEY COMMENT '統合ID',
     is_used BOOLEAN NOT NULL DEFAULT FALSE COMMENT '使用中フラグ',
+    main_child_id INT COMMENT '代表子POI ID',
     main_name VARCHAR(255) COMMENT '代表名称',
     main_kana VARCHAR(255) COMMENT '代表よみがな',
     geom POINT /*!80003 SRID 4326 */ NOT NULL COMMENT '地理座標',
@@ -125,7 +127,10 @@ CREATE TABLE mountain_pois (
     z_min INT COMMENT '最小表示Zレベル',
     last_updated_at DATETIME COMMENT '更新日時',
     SPATIAL INDEX (geom),
-    INDEX idx_tile_x_y (x_z18, y_z18)
+    INDEX idx_tile_x_y (x_z18, y_z18),
+    CONSTRAINT fk_mountain_main_child
+    FOREIGN KEY (main_child_id) REFERENCES mountain_pois (id)
+    ON DELETE SET NULL ON UPDATE CASCADE
 ) COMMENT '山岳統合POI';
 
 CREATE TABLE poi_hierarchies (
@@ -137,7 +142,6 @@ CREATE TABLE poi_hierarchies (
         'AREA_TO_PEAK',
         'MAIN_TO_SUB_PEAK'
     ) NOT NULL COMMENT '関係種別',
-    is_representative BOOLEAN NOT NULL DEFAULT FALSE COMMENT '代表フラグ',
     PRIMARY KEY (parent_id, child_id),
     FOREIGN KEY (parent_id) REFERENCES mountain_pois (id)
     ON DELETE CASCADE ON UPDATE CASCADE,
