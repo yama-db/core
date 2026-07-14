@@ -32,6 +32,9 @@ sub_peak_list = [
     {"name": "中峰", "kana": ["ちゅうほう", "なかみね"]},
     {"name": "奥峰", "kana": ["おくほう", "おくみね"]},
     {"name": "前峰", "kana": ["ぜんほう", "まえみね"]},
+    {"name": "前嶽", "kana": ["まえだけ"]},
+    {"name": "男岳", "kana": ["おだけ"]},  # 二上山
+    {"name": "女岳", "kana": ["めだけ"]},  # 二上山
     {"name": "男峰", "kana": ["なんぽう"]},
     {"name": "女峰", "kana": ["にょほう"]},
     {"name": "雄岳", "kana": ["おだけ"]},
@@ -48,6 +51,7 @@ sub_peak_list = [
     {"name": "三等三角点", "kana": ["さんとうさんかくてん"]},
     {"name": "四等三角点", "kana": ["よんとうさんかくてん"]},
     {"name": "三角点", "kana": ["さんかくてん"]},
+    {"name": "第2ピーク", "kana": ["だいにぴーく"]},  # 船窪岳
     {"name": "四峰", "kana": ["よんほう"]},
     {"name": "三峰", "kana": ["さんほう"]},
     {"name": "二峰", "kana": ["にほう", "にみね"]},
@@ -71,17 +75,16 @@ sub_peak_list = [
 ]
 
 exclude_names = [
-    "以東岳",
     "富良野西岳",
-    "大東岳",
-    "鈴北岳",
-    "小東岳",
     "桧塚奥峰",
-    "第一峰",
     "白倉南岳",
-    "西雄岳",
-    "奥雄岳",
-    "荒雄岳",
+    "旭山南峰",
+    "早乙女岳",
+    "チロロ西峰",
+    "野花南岳",
+    "双六南峰",
+    "鬼付女峰",
+    "地神北峰",
 ]
 
 
@@ -114,7 +117,10 @@ def process_sub_peak(names, kanas):
                         break
                     del names[i]
                 else:
-                    names[i] = name.removesuffix(sub_peak_name)
+                    name_removed = name.removesuffix(sub_peak_name)
+                    if len(name_removed) < 2:
+                        break
+                    names[i] = name_removed
                 sub_peak_kana = process_sub_peak_kana(kanas, sub_peak["kana"])
                 results.append(
                     {
@@ -135,6 +141,18 @@ delimiters = regex.compile(r"[\p{P}\p{S}\p{Z}]+")
 type_order = {"MAIN": 0, "AREA": 1, "SUB_PEAK": 2, "ALIAS": 3}
 
 
+exclude_prefix = (
+    "点名",
+    "点標",
+    "三角点",
+    "一等",
+    "二等",
+    "三等",
+    "四等",
+    "仮",
+)
+
+
 def extract_aliases(name_str, kana_str):
     names = [x for x in delimiters.split(name_str) if x != ""]
     kanas = [x for x in delimiters.split(kana_str) if x != ""]
@@ -143,11 +161,16 @@ def extract_aliases(name_str, kana_str):
     len_names = len(names)
     len_kanas = len(kanas)
     max_len = max(len_names, len_kanas)
+    i0 = 0
     for i in range(max_len):
         name = names[i] if i < len_names else names[-1]
         kana = kanas[i] if i < len_kanas else ""
+        if name.startswith(exclude_prefix):
+            if i == i0:
+                i0 += 1
+            continue
         names_json.append(
-            {"type": "MAIN" if i == 0 else "ALIAS", "name": name, "kana": kana}
+            {"type": "MAIN" if i == i0 else "ALIAS", "name": name, "kana": kana}
         )
     names_json.sort(key=lambda x: type_order.get(x["type"], 99))
     return names_json
