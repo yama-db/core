@@ -2,10 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import sys
-from pathlib import Path
 from argparse import ArgumentParser
 
-from shared import config, db_util
+from shared import db_util
 
 parser = ArgumentParser(description="統合POI名称を作成")
 parser.add_argument(
@@ -41,7 +40,7 @@ try:
 
     # 既存のPOI名称をクリア
     if truncate:
-        db_util.truncate_table(cursor, 'poi_names')
+        db_util.truncate_table(cursor, "poi_names")
 
     print(f"Importing POI names from {table_name}...")
     if table_name == "stg_book_web_pois":
@@ -49,18 +48,13 @@ try:
     else:
         source_id_subquery = f"(SELECT id AS source_id FROM information_sources WHERE source_table = '{table_name}' LIMIT 1)"
 
+    normalization_table = str.maketrans(
+        "篭桧莱壷欝呑屏溪渕秃剥薮﨔繩蝉掴頬箪彌權",  # 異体字、旧字
+        "籠檜萊壺鬱吞屛渓淵禿剝藪欅縄蟬摑頰簞弥権",  # 常用漢字、印刷標準
+    )
+
     cursor.execute(
         f"""
-        INSERT INTO poi_names (
-            mountain_id,
-            source_uuid,
-            source_id,
-            poi_name,
-            poi_name_normalized,
-            poi_kana,
-            name_type,
-            is_preferred
-        )
         SELECT 
             p.mountain_id,
             s.source_uuid,
@@ -82,6 +76,30 @@ try:
         ) AS j
         WHERE j.poi_kana IS NOT NULL AND j.poi_kana <> ''
         """,
+    )
+    values = []
+    for row in cursor.fetchall():
+        row["poi_name_normalized"] = row["poi_name_normalized"].translate(
+            normalization_table
+        )
+        values.append(tuple(row.values()))
+
+    cursor.executemany(
+        f"""
+        INSERT INTO poi_names (
+            mountain_id,
+            source_uuid,
+            source_id,
+            poi_name,
+            poi_name_normalized,
+            poi_kana,
+            name_type,
+            is_preferred
+        ) VALUES (
+            %s, %s, %s, %s, %s, %s, %s, %s
+        )
+        """,
+        values,
     )
 
     # 優先名称の設定
