@@ -5,7 +5,7 @@ id,info_type,source_table,display_name,url,ndl_id,reliability_level
 4,DATASET,stg_wikidata_pois,ウィキ,,,60
 5,DATASET,stg_yamap_pois,ヤマップ,,,30
 6,DATASET,stg_yamareco_pois,ヤマレコ,,,80
-7,DATASET,stg_legacy_pois,旧データ,,,90
+7,DATASET,stg_legacy_pois,その他,,,90
 10,BOOK,stg_book_web_pois,静岡の百山,,R100000002-I000002152914,50
 11,BOOK,stg_book_web_pois,石川の山,,R100000002-I000002016598,50
 12,BOOK,stg_book_web_pois,大分の山,,R100000002-I000001972726,50
