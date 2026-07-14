@@ -4,7 +4,6 @@
 # POI CSVファイルをDBに登録
 
 import csv
-import json
 import sys
 from argparse import ArgumentParser
 from pathlib import Path
