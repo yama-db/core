@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import csv
 import json
 import sys
 from argparse import ArgumentParser
@@ -8,6 +9,7 @@ from pathlib import Path
 
 import mojimoji
 import regex
+from shared import extract_aliases
 
 # コマンドライン引数の解析
 parser = ArgumentParser(
@@ -16,8 +18,27 @@ parser = ArgumentParser(
 parser.add_argument(
     "tiles_dir", help="ベクタータイルが格納されているディレクトリのパス"
 )
+parser.add_argument("csv_file", help="修正データのCSVファイル・パス")
 args = parser.parse_args()
 tiles_dir = args.tiles_dir
+csv_file = args.csv_file
+
+# 誤記訂正データの読み込み
+try:
+    with open(csv_file, "r", encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f)
+        corrections = {
+            row["raw_id"]: {
+                "name": row["name"],
+                "kana": row["kana"],
+                "name_fixed": row["name_fixed"],
+                "kana_fixed": row["kana_fixed"],
+            }
+            for row in reader
+        }
+except FileNotFoundError:
+    print(f"❌ ファイルが見つかりません: {csv_file}", file=sys.stderr)
+    sys.exit(1)
 
 # 外字・環境依存文字リスト
 # https://www.gsi.go.jp/common/000255942.pdf
@@ -55,6 +76,18 @@ def translate_gaiji(name: str, gaiji_flg: str) -> str:
     return name[: (i // 2)] + gaiji_char + name[m - (j // 2) :]
 
 
+exclude_raw_ids = [
+    "29066-12795-0",  # 袈裟丸山
+    "28979-12869-0",  # 横岳
+    "28977-12872-0",  # 権現岳
+    "29218-12441-1",  # 七ッ森
+    "29140-12961-0",  # 清澄山
+    "29123-12740-2",  # 那須岳
+    "28911-12835-2",  # 天狗岩
+    "29037-12755-1",  # 三ッ石山
+]
+
+
 def extract_features(file_path):
     x = file_path.parent.name
     y = file_path.stem
@@ -77,16 +110,22 @@ def extract_features(file_path):
             if gaijiFlg != "0":
                 name = translate_gaiji(name, gaijiFlg)
             name = regex.sub(r"(\p{Han})ケ(\p{Han})", r"\1ヶ\2", name)
+            kana = properties["kana"]
             raw_id = f"{x}-{y}-{index}"
-            # NOTE: 蔵王山の場合、複数の読み（ざおうざん、ざおうさん）がある。
-            names_json = [
-                {
-                    "name": name,
-                    "kana": kana.strip(),
-                    "type": "MAIN" if i == 0 else "ALIAS",
-                }
-                for i, kana in enumerate(properties["kana"].split(","))
-            ]
+            if raw_id in exclude_raw_ids:
+                continue
+            if raw_id in corrections:
+                corrected = corrections[raw_id]
+                if not (name == corrected["name"] and kana == corrected["kana"]):
+                    print(
+                        f"⚠️ 修正データと不一致: {raw_id} - {name}({kana}) vs {corrected['name']}({corrected['kana']})",
+                        file=sys.stderr,
+                    )
+                    continue
+                name = corrected["name_fixed"]
+                kana = corrected["kana_fixed"]
+
+            names_json = extract_aliases(name, kana)
             row = [
                 raw_id,
                 raw_type,

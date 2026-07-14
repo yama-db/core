@@ -8,7 +8,6 @@ import sys
 from argparse import ArgumentParser
 
 import regex
-from shared import generate_source_uuid
 
 from convert_pua import convert_pua
 
@@ -27,6 +26,14 @@ def dms2deg(dms_str: str) -> float:
     s = float(r.group(3))
     return d + (m / 60) + (s / 3600)
 
+
+exclude_raw_ids = [
+    "493050-419",  # 杵島山
+    "543850-105",  # 𣘹原山（たらわらやま）
+    "543775-165",  # 鹿島槍ヶ岳
+    "553814-57",  # 裏岩管山
+    "524051-24",  # 清澄山
+]
 
 header = [
     "raw_id",
@@ -51,6 +58,8 @@ for row in reader:
     code = int(row["1/25_000地形図コード"])
     seq = int(row["注記番号"])
     raw_id = f"{code}-{seq}"
+    if raw_id in exclude_raw_ids:
+        continue
     lat = dms2deg(row["注記代表点緯度"])
     lon = dms2deg(row["注記代表点経度"])
     name = convert_pua(row["注記文字"])

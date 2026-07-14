@@ -5,14 +5,11 @@ TABLE_NAME := stg_gsi_vtexp_pois
 
 all: dist/gsi_vtexp.tsv
 
-dist work:
+dist:
 	mkdir -p $@
 
-work/gsi_vtexp.tsv: extract_features.py archive/.downloaded | work
-	python3 extract_features.py archive/tiles/ > $@
-
-dist/gsi_vtexp.tsv: raw/gsi_vtexp_corrections.csv work/gsi_vtexp.tsv apply_corrections.py | dist
-	python3 apply_corrections.py $(word 1,$^) < $(word 2,$^) > $@
+dist/gsi_vtexp.tsv: extract_features.py raw/gsi_vtexp_corrections.csv archive/.downloaded | dist
+	python3 extract_features.py archive/tiles/ raw/gsi_vtexp_corrections.csv > $@
 
 archive/.downloaded:
 	@echo "Please run './get_tiles.sh' to download VTEXP tiles."

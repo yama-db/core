@@ -85,6 +85,13 @@ def extract_name_and_kana(extract: str, label: str) -> List[Dict[str, str]]:
     ]
 
 
+exclude_raw_ids = [
+    "Q11366434",  # 中津山地
+    "Q11442517",  # 天子山地
+    "Q11431086",  # 多賀火山
+    "Q2618895",  # 阿寒岳
+]
+
 with open(data_csv, encoding="utf-8-sig") as f:
     reader = csv.DictReader(f)
     fieldnames = [
@@ -101,6 +108,8 @@ with open(data_csv, encoding="utf-8-sig") as f:
     ids = set()
     for row in reader:
         raw_id = row["item"].split("/")[-1]  # Wikidata QID
+        if raw_id in exclude_raw_ids:
+            continue
         if raw_id in ids:
             continue
         ids.add(raw_id)
