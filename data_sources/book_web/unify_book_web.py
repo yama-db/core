@@ -68,31 +68,20 @@ try:
         name = row["name"]
         elevation = row["elevation"]
 
-        # 親POIが存在し、その名称が指定のものと一致する場合は親POIにリンク
         cursor.execute(
             f"""
-            SELECT m.id, m.elevation
-            FROM mountain_pois AS m
-            JOIN poi_hierarchies AS p ON m.id = p.parent_id AND p.child_id = %s
-            WHERE m.main_name = %s
+            SELECT id, elevation
+            FROM mountain_pois
+            WHERE is_used AND id = %s
             """,
-            (mountain_id, name),
+            (mountain_id,),
         )
         if not (poi := cursor.fetchone()):
-            cursor.execute(
-                f"""
-                SELECT id, elevation
-                FROM mountain_pois
-                WHERE is_used AND id = %s
-                """,
-                (mountain_id,),
+            print(
+                f"Skipping source_id={source_id} raw_id={raw_id} '{name}': mountain POI {mountain_id} not found.",
+                file=sys.stderr,
             )
-            if not (poi := cursor.fetchone()):
-                print(
-                    f"Skipping source_id={source_id} raw_id={raw_id} '{name}': mountain POI {mountain_id} not found.",
-                    file=sys.stderr,
-                )
-                continue
+            continue
 
         mountain_id = poi["id"]
         elev = poi["elevation"]

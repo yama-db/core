@@ -8,9 +8,11 @@ from argparse import ArgumentParser
 from shared import db_util
 
 parser = ArgumentParser(description="統一POIデータを生成")
+parser.add_argument("parent_pois_csv", help="親POIのCSVファイル")
 parser.add_argument("mountain_pois_csv", help="統一POIデータの出力先CSVファイル")
 parser.add_argument("poi_hierarchies_csv", help="POI階層データの出力先CSVファイル")
 args = parser.parse_args()
+parent_pois_csv = args.parent_pois_csv
 mountain_pois_csv = args.mountain_pois_csv
 poi_hierarchies_csv = args.poi_hierarchies_csv
 
@@ -53,24 +55,12 @@ try:
         pois[id - 1] = row.copy()
 
     # 山域名と山頂名を親と子の関係で取得
-    cursor.execute(
-        """
-        SELECT
-            g.id AS child_id,
-            p.name AS parent_name,
-            p.kana AS parent_kana,
-            c.name AS child_name,
-            c.kana AS child_kana,
-            g.lat,
-            g.lon,
-            g.alt
-        FROM geom AS g
-        JOIN sanmei AS p ON g.id = p.id
-        JOIN sanmei AS c ON g.id = c.id
-        WHERE p.type = 0 AND c.type = 1
-        """,
-    )
-    relations = cursor.fetchall()
+    with open(parent_pois_csv, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)  # group_id,parent_name,parent_kana,child_id,child_name,relation_type
+        relations = list(reader)
+
+    # 異なる group_id の数を数える
+    unique_count = len({row["group_id"] for row in relations})
 
     # 山頂名を格納するための空きIDを準備
     cursor.execute(
@@ -82,50 +72,52 @@ try:
         ORDER BY s.id
         LIMIT %s
         """,
-        (len(relations),),
+        (unique_count,),
     )
     unuseds = cursor.fetchall()
 
+    fieldnames=[
+        "parent_id",
+        "parent_name",
+        "child_id",
+        "child_name",
+        "relation_type",
+    ]
+
     with open(poi_hierarchies_csv, "w", encoding="utf-8") as f:
-        writer = csv.DictWriter(
-            f,
-            fieldnames=[
-                "parent_id",
-                "parent_name",
-                "child_id",
-                "child_name",
-                "relation_type",
-            ],
-        )
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
-        for relation, unused in zip(relations, unuseds, strict=True):
-            child_id = relation["child_id"]
-            pois[child_id - 1].update(
-                {
-                    "is_used": 1,
-                    "name": relation["child_name"],
-                    "kana": relation["child_kana"],
-                }
-            )
-            parent_id = unused["parent_id"]
-            pois[parent_id - 1].update(
-                {
-                    "id": parent_id,
-                    "is_used": 1,
-                    "name": relation["parent_name"],
-                    "kana": relation["parent_kana"],
-                    "lat": relation["lat"],
-                    "lon": relation["lon"],
-                    "alt": relation["alt"],
-                }
-            )
+        previous_group_id = 0
+        for relation in relations:
+            group_id = int(relation["group_id"])
+            unused = unuseds[group_id - 1]
+            parent_id = int(unused["parent_id"])
+            child_id = int(relation["child_id"])
+            child_poi = pois[child_id - 1]
+            if group_id == previous_group_id + 1:
+                pois[parent_id - 1].update(
+                    {
+                        "id": parent_id,
+                        "is_used": 1,
+                        "name": relation["parent_name"],
+                        "kana": relation["parent_kana"],
+                        "lat": child_poi["lat"],
+                        "lon": child_poi["lon"],
+                        "alt": child_poi["alt"],
+                    }
+                )
+                previous_group_id = group_id
+            elif group_id != previous_group_id:
+                raise ValueError(
+                    f"Unexpected group_id sequence: {group_id} after {previous_group_id}"
+                )
             writer.writerow(
                 {
                     "parent_id": parent_id,
                     "parent_name": relation["parent_name"],
                     "child_id": child_id,
                     "child_name": relation["child_name"],
-                    "relation_type": "AREA_TO_PEAK",
+                    "relation_type": relation["relation_type"],
                 }
             )
 

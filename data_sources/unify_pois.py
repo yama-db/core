@@ -7,7 +7,7 @@ from argparse import ArgumentParser
 from shared import config, db_util
 
 EPS = config.EPS
-RADIUS = int(2.5 * EPS)
+RADIUS = int(EPS)
 
 parser = ArgumentParser(description="POIデータソースと統合POIのリンクを作成")
 parser.add_argument(
@@ -90,30 +90,20 @@ try:
         cursor.execute(
             f"""
             SELECT
-                child.id AS mountain_id,
-                child.elevation,
-                ST_Distance_Sphere(child.geom, @center) AS distance
-            FROM mountain_pois AS child
-            WHERE child.is_used
-                AND ST_Within(child.geom, ST_Buffer(@center, %s))
-                -- ▼ ① 親POIである場合を除外（他の子POIを従えている概念レコードなどを排除）
+                m.id AS mountain_id,
+                m.elevation,
+                ST_Distance_Sphere(m.geom, @center) AS distance
+            FROM mountain_pois AS m
+            WHERE m.is_used
+                AND ST_Within(m.geom, ST_Buffer(@center, %s))
                 AND NOT EXISTS (
-                    SELECT 1 
+                    SELECT 1
                     FROM poi_hierarchies AS p
-                    WHERE p.parent_id = child.id
-                )
-                -- ▼ ② 子POIであり、かつその親POIと名称が完全一致する場合を除外
-                AND NOT EXISTS (
-                    SELECT 1 
-                    FROM poi_hierarchies AS h
-                    INNER JOIN mountain_pois AS parent 
-                        ON h.parent_id = parent.id
-                    WHERE h.child_id = child.id
-                    AND parent.main_name = %s
+                    WHERE p.parent_id = m.id
                 )
             ORDER BY distance
             """,
-            (RADIUS, name),
+            (RADIUS,),
         )
         if not (pois := cursor.fetchall()):
             print(
