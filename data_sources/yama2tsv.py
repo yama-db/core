@@ -37,13 +37,24 @@ try:
         "last_updated_at",
     ]
 
+    exclude_prefix = (
+        "点名",
+        "点標",
+        "三角点",
+        "一等",
+        "二等",
+        "三等",
+        "四等",
+        "仮",
+    )
+
     with open(tsv_file, "r", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f, delimiter="\t")
         print("\t".join(fieldnames))
         for row in reader:
             name = html.unescape(row["name"].strip())
-            if name.startswith("（") and name.endswith("）"):
-                name = name[1:-1]
+            if name.startswith(exclude_prefix):
+                continue
             name = regex.sub(r"(\p{Han})ケ(\p{Han})", r"\1ヶ\2", name)
             data = json.loads(row["kana"])
             hira = data.get("hira", "")
