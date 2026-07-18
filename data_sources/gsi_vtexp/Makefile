@@ -11,6 +11,8 @@ dist:
 dist/gsi_vtexp.tsv: extract_features.py raw/gsi_vtexp_corrections.csv archive/.downloaded | dist
 	python3 extract_features.py archive/tiles/ raw/gsi_vtexp_corrections.csv > $@
 
+extract_features.py: ../../shared/extract_aliases.py
+
 archive/.downloaded:
 	@echo "Please run './get_tiles.sh' to download VTEXP tiles."
 	@echo "It may take a long time and a large amount of disk space."

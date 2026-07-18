@@ -13,7 +13,9 @@ dist/$(SOURCE).tsv: work/$(SOURCE).tsv ../yama2tsv.py ../../shared/extract_alias
 	python3 ../yama2tsv.py $< > $@
 
 work/$(SOURCE).tsv: archive/$(SOURCE).tsv | work
-	sed -e 's/猟師ノ 尾根ノ頭/猟師ノ尾根ノ頭/g' $< > $@
+	sed -e '/^74728\t/s,猟師ノ 尾根ノ頭,猟師ノ尾根ノ頭,'\
+	 -e '/^6337\t/s,１むね,いちみね,'\
+	 -e '/^6338\t/s,２むね,にみね,' $< > $@
 
 archive/$(SOURCE).tsv:
 	@echo "please run the crawler to generate '$@'."

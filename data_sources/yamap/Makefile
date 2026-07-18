@@ -6,8 +6,16 @@ TABLE_NAME := stg_$(SOURCE)_pois
 
 all: dist/$(SOURCE).tsv
 
-dist/$(SOURCE).tsv: archive/$(SOURCE).tsv ../yama2tsv.py ../../shared/extract_aliases.py
+dist work:
+	mkdir -p $@
+
+dist/$(SOURCE).tsv: work/$(SOURCE).tsv ../yama2tsv.py | dist
 	python3 ../yama2tsv.py $< > $@
+
+../yama2tsv.py: ../../shared/extract_aliases.py
+
+work/$(SOURCE).tsv: archive/$(SOURCE).tsv | work
+	sed -e 's/悪沢岳（東岳）/東岳（悪沢岳）/g' $< > $@
 
 archive/$(SOURCE).tsv:
 	@echo "please run the crawler to generate '$@'."
