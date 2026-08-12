@@ -7,12 +7,13 @@ from argparse import ArgumentParser
 from shared import config, db_util
 
 EPS = config.EPS
-RADIUS = int(EPS)
+RADIUS = int(5 * EPS)
 
 parser = ArgumentParser(description="POIデータソースと統合POIのリンクを作成")
 parser.add_argument(
     "table_name",
     choices=[
+        "stg_gsi_1003_pois",
         "stg_gsi_dm25k_pois",
         "stg_gsi_vtexp_pois",
         "stg_yamap_pois",
@@ -61,7 +62,7 @@ try:
             JOIN information_sources AS s ON p.source_id = s.id
             WHERE s.source_table = %s
             """,
-            (table_name,)
+            (table_name,),
         )
         print(f"Existing links for {table_name} have been deleted.", file=sys.stderr)
 
@@ -72,17 +73,19 @@ try:
             source_uuid,
             raw_id,
             names_json->>'$[0].name' AS name,
-            elevation
+            lat,
+            lon
         FROM `{table_name}`
         """,
     )
-    for row in cursor.fetchall():
+    rows = cursor.fetchall()
+    total_count = len(rows)
+    for row in rows:
         source_uuid = row["source_uuid"]
         raw_id = row["raw_id"]
         name = row["name"]
-        elevation = row["elevation"]
 
-        # 距離で絞り込み、標高が最高となる統合POIを検索
+        # 半径RADIUS内の統合POIを検索
         cursor.execute(
             f"SELECT geom INTO @center FROM `{table_name}` WHERE source_uuid = %s",
             (source_uuid,),
@@ -91,7 +94,6 @@ try:
             f"""
             SELECT
                 m.id AS mountain_id,
-                m.elevation,
                 ST_Distance_Sphere(m.geom, @center) AS distance
             FROM mountain_pois AS m
             WHERE m.is_used
@@ -102,51 +104,21 @@ try:
                     WHERE p.parent_id = m.id
                 )
             ORDER BY distance
+            LIMIT 1
             """,
             (RADIUS,),
         )
         if not (pois := cursor.fetchall()):
+            lat = row["lat"]
+            lon = row["lon"]
             print(
-                f"Skipping {raw_id} '{name}': unified POI not found within {RADIUS}m.",
+                f"Skipping {raw_id} '{name}' ({lat:.6f}, {lon:.6f}): unified POI not found within {RADIUS}m.",
                 file=sys.stderr,
             )
             continue
-        if len(pois) == 1 or pois[0]["distance"] < EPS:
-            poi = pois[0]
-        else:
-            poi = max(pois, key=lambda x: x["elevation"])
-
+        poi = pois[0]
         mountain_id = poi["mountain_id"]
         distance = poi["distance"]
-
-        # 既に同じ情報源からリンクされている場合は、距離が近い方を優先
-        cursor.execute(
-            f"""
-            SELECT
-                s.raw_id,
-                s.names_json->>'$[0].name' AS name,
-                p.linked_distance AS distance
-            FROM `{table_name}` AS s
-            JOIN poi_links AS p ON s.source_uuid = p.source_uuid
-            WHERE p.mountain_id = %s AND p.source_id = %s AND p.linked_distance < %s
-            ORDER BY p.linked_distance
-            LIMIT 1
-            """,
-            (mountain_id, source_id, distance),
-        )
-        if (exists_closer := cursor.fetchone()) is not None:
-            print(
-                f"Skipping {raw_id} '{name}': closer link already exists.",
-                file=sys.stderr,
-            )
-            ec_raw_id = exists_closer['raw_id']
-            ec_name = exists_closer['name']
-            ec_distance = exists_closer['distance']
-            print(
-                f"  Existing: {ec_raw_id} '{ec_name}' at {ec_distance:.1f}m",
-                file=sys.stderr,
-            )
-            continue
 
         cursor.execute(
             """
@@ -160,12 +132,35 @@ try:
             (mountain_id, source_id, source_uuid, distance),
         )
 
+    # 重複リンクの削除（距離が大きいもの、または距離が同じ場合はsource_uuidが大きいものを削除）
     cursor.execute(
-        "SELECT COUNT(*) AS total FROM poi_links WHERE source_id = %s",
+        """
+        DELETE p1
+        FROM poi_links AS p1
+        JOIN poi_links AS p2
+            ON p1.mountain_id = p2.mountain_id 
+        AND p1.source_id = %s
+        AND p2.source_id = %s
+        AND (
+            p1.linked_distance > p2.linked_distance
+            OR (
+                p1.linked_distance = p2.linked_distance 
+                AND p1.source_uuid > p2.source_uuid
+            )
+        )
+        """,
+        (source_id, source_id),
+    )
+
+    cursor.execute(
+        "SELECT COUNT(*) AS linked_count FROM poi_links WHERE source_id = %s",
         (source_id,),
     )
-    total = cursor.fetchone()["total"]
-    print(f"Total linked POIs: {total}")
+    linked_count = cursor.fetchone()["linked_count"]
+    print(
+        f"Total linked POIs: {linked_count}/{total_count} for source '{table_name}'",
+        file=sys.stderr,
+    )
     success = True
 
 except Exception as err:
