@@ -16,6 +16,10 @@ delimiters = regex.compile(r"[\p{P}\p{S}\p{Z}]+")
 
 type_order = {"MAIN": 0, "AREA": 1, "SUB_PEAK": 2, "ALIAS": 3}
 
+yama_readings = ("やま", "さん", "ざん", "せん", "ぜん", "うら")
+take_readings = ("たけ", "だけ", "だっか", "だき")
+mine_readings = ("みね", "ほう", "ぽう", "ぼう", "ぽ", "うら", "なる")
+
 
 def extract_aliases(name_str, kana_str):
     names = [x for x in delimiters.split(name_str) if x != ""]
@@ -28,6 +32,27 @@ def extract_aliases(name_str, kana_str):
     for i in range(max_len):
         name = names[i] if i < len_names else names[-1]
         kana = kanas[i] if i < len_kanas else ""
+        if name.endswith("山") and kana and not kana.endswith(yama_readings):
+            print(
+                f"Warning: name '{name}' ends with '山' but kana '{kana}' does not end with any of {yama_readings}.",
+                file=sys.stderr,
+            )
+            if i > 0:
+                continue
+        if name.endswith(("岳", "嶽")) and kana and not kana.endswith(take_readings):
+            print(
+                f"Warning: name '{name}' ends with '岳' or '嶽' but kana '{kana}' does not end with any of {take_readings}.",
+                file=sys.stderr,
+            )
+            if i > 0:
+                continue
+        if name.endswith(("峰", "峯")) and kana and not kana.endswith(mine_readings):
+            print(
+                f"Warning: name '{name}' ends with '峰' or '峯' but kana '{kana}' does not end with any of {mine_readings}.",
+                file=sys.stderr,
+            )
+            if i > 0:
+                continue
         names_json.append(
             {"type": "MAIN" if i == 0 else "ALIAS", "name": name, "kana": kana}
         )
