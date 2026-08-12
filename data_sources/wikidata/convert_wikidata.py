@@ -37,15 +37,12 @@ with open(pedia_csv, encoding="utf-8-sig") as f:
             "%Y-%m-%d %H:%M:%S"
         )
         pedia[qid] = {
-            "extract": row["extract"],
-            "timestamp": row["timestamp"],
+            "extract": extract,
+            "timestamp": timestamp,
         }
 
 
 def extract_name_and_kana(extract: str, label: str) -> List[Dict[str, str]]:
-    formatted_extract = re.sub(
-        r"^(?:この(?:項の)?)?「?(.+?)」?は、.*$", r"\1", extract.replace("\n", "")
-    )
     if m := re.search(r"^(.*?)[（\(]", label):
         label = m.group(1).strip()
     name = label
