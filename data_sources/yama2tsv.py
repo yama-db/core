@@ -46,6 +46,7 @@ try:
         "三等",
         "四等",
         "仮",
+        "電子基準点",
     )
 
     with open(tsv_file, "r", encoding="utf-8-sig") as f:
@@ -59,41 +60,10 @@ try:
             data = json.loads(row["kana"])
             hira = data.get("hira", "")
             kana = jaconv.kata2hira(hira) if hira else ""
-
-            lon = float(row["lon"])
-            lat = float(row["lat"])
-            if (elevation := row["elevation"]) == "NULL":
-                elevation = ""
-            if lon and lat:
-                if not (abs(lon) <= 180.0 and abs(lat) <= 90.0):
-                    print(
-                        f"Warning: {name} ({lat:.6f}, {lon:.6f}) is outside valid range.",
-                        file=sys.stderr,
-                    )
-                    continue
-                coord = f"POINT({lon:.6f} {lat:.6f})"
-                cursor.execute(
-                    f"""
-                    SELECT EXISTS (
-                        SELECT 1
-                        FROM administrative_boundaries 
-                        WHERE ST_Contains(
-                            geom,
-                            ST_GeomFromText(%s, 4326, "axis-order=long-lat")
-                        )
-                    ) AS is_japan;
-                    """,
-                    (coord,),
-                )
-                result = cursor.fetchone()
-                if not result["is_japan"]:
-                    print(
-                        f"Warning: {name} ({lat:.6f}, {lon:.6f}) is outside Japan.",
-                        file=sys.stderr,
-                    )
-                    continue
-
             names_json = extract_aliases(name, kana)
+            elevation = row.get("elevation")
+            if elevation is None or elevation == "NULL":
+                elevation = ""
             output_row = [
                 row["raw_id"],
                 row["raw_type"],

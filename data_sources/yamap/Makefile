@@ -9,13 +9,16 @@ all: dist/$(SOURCE).tsv
 dist work:
 	mkdir -p $@
 
-dist/$(SOURCE).tsv: work/$(SOURCE).tsv ../yama2tsv.py | dist
-	python3 ../yama2tsv.py $< > $@
+dist/$(SOURCE).tsv: work/$(SOURCE)_fixed.tsv ../yama2tsv.py | dist
+	python3 ../yama2tsv.py $< > $@ 2> log.txt
 
 ../yama2tsv.py: ../../shared/extract_aliases.py
 
-work/$(SOURCE).tsv: archive/$(SOURCE).tsv | work
-	sed -e 's/悪沢岳（東岳）/東岳（悪沢岳）/g' $< > $@
+work/$(SOURCE).tsv: archive/$(SOURCE).tsv ../tsv_region.py | work
+	python3 ../tsv_region.py $< > $@
+
+work/$(SOURCE)_fixed.tsv: work/$(SOURCE).tsv error_collections.sed
+	sed -f $(word 2, $^) $< > $@
 
 archive/$(SOURCE).tsv:
 	@echo "please run the crawler to generate '$@'."
