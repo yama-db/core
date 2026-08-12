@@ -30,7 +30,6 @@ CREATE TABLE information_sources (
     source_table VARCHAR(64) COLLATE ascii_bin NOT NULL COMMENT '参照先テーブル名',
     display_name VARCHAR(100) NOT NULL UNIQUE COMMENT '表示用名称',
     url VARCHAR(2083) COMMENT '情報源URL',
-    ndl_id VARCHAR(50) COLLATE ascii_bin COMMENT 'NDL ID（BOOK用）',
     reliability_level TINYINT NOT NULL DEFAULT 50 COMMENT '信頼度順位（0が最高）'
 ) COMMENT '情報源リスト';
 
@@ -66,6 +65,9 @@ CREATE TABLE _stg_template_pois (
 
 CREATE TABLE stg_gsi_gcp_pois LIKE _stg_template_pois;
 ALTER TABLE stg_gsi_gcp_pois COMMENT '基盤地図情報（基準点・標高点）';
+
+CREATE TABLE stg_gsi_1003_pois LIKE _stg_template_pois;
+ALTER TABLE stg_gsi_1003_pois COMMENT '日本の主な山岳標高（1003山）';
 
 CREATE TABLE stg_gsi_dm25k_pois LIKE _stg_template_pois;
 ALTER TABLE stg_gsi_dm25k_pois COMMENT '数値地図25000（地名・公共施設）';

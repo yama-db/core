@@ -69,7 +69,7 @@ try:
             for row in reader:
                 raw_id = row["raw_id"]
                 raw_type = "山"  # FIXME:書籍のPOIはすべて山として扱う
-                uuid = generate_source_uuid(f"{table_name}_{source_id}", raw_id)
+                uuid = generate_source_uuid(f"{table_name}_{source_id}_{raw_type}", raw_id)
                 names_json = extract_aliases(row["name"], row["kana"])
                 values.append(
                     (
