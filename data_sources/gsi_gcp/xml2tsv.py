@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# 国土地理院 基準点データ XMLファイルをCSV形式で出力
+# 国土地理院 基準点データ XMLファイルをTSV形式で出力
 
-import csv
+import json
 import sys
 from xml.etree import ElementTree as ET
 
@@ -15,8 +15,7 @@ namespaces = {
 header = [
     "raw_id",
     "raw_type",
-    "name",
-    "kana",
+    "names_json",
     "lat",
     "lon",
     "elevation",
@@ -35,9 +34,7 @@ z_min_mapping = {
     "標高点": 12,
 }
 
-writer = csv.DictWriter(sys.stdout, fieldnames=header)
-writer.writeheader()
-
+print("\t".join(header))
 for f in sys.argv[1:]:
     tree = ET.parse(f)
     root = tree.getroot()
@@ -63,6 +60,7 @@ for f in sys.argv[1:]:
             else:
                 print(f"Warning: unknown type '{t}' is skipped", file=sys.stderr)
                 continue
+            names_json = {"name": name, "kana": ""}
             raw_id = pt.find("fid", namespaces).text
             lat, lon = pt.find("pos/gml:Point/gml:pos", namespaces).text.split()
             z_min = z_min_mapping.get(raw_type, 13)
@@ -74,18 +72,16 @@ for f in sys.argv[1:]:
                 )
                 continue
             last_update_at = pt.find("devDate/gml:timePosition", namespaces).text
-            writer.writerow(
-                {
-                    "raw_id": raw_id,
-                    "raw_type": raw_type,
-                    "name": name,
-                    "kana": None,
-                    "lat": lat,
-                    "lon": lon,
-                    "elevation": elevation,
-                    "z_min": z_min,
-                    "last_updated_at": last_update_at,
-                }
-            )
+            output_row = [
+                raw_id,
+                raw_type,
+                json.dumps(names_json, separators=(",", ":"), ensure_ascii=False),
+                lat,
+                lon,
+                elevation,
+                z_min,
+                last_update_at,
+            ]
+            print("\t".join(map(str, output_row)))
 
 # __END__

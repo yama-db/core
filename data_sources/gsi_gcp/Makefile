@@ -3,20 +3,20 @@
 
 TABLE_NAME := stg_gsi_gcp_pois
 
-all: dist/gsi_gcp.csv
+all: dist/gsi_gcp.tsv
 	@echo "All required raw files are present."
 
 dist:
 	mkdir -p $@
 
-dist/gsi_gcp.csv: xml2csv.py work/.extracted | dist
-	python3 xml2csv.py work/FG-GML-*.xml > $@
+dist/gsi_gcp.tsv: xml2tsv.py work/.extracted | dist
+	python3 xml2tsv.py work/FG-GML-*.xml > $@
 
 work/.extracted:
 	./extract_xml.sh
 	touch $@
 
-import: dist/gsi_gcp.csv
+import: dist/gsi_gcp.tsv
 	python3 ../import_pois.py --truncate $(TABLE_NAME) $<
 
 unify:
