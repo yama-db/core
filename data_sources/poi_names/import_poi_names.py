@@ -10,6 +10,7 @@ parser = ArgumentParser(description="統合POI名称を作成")
 parser.add_argument(
     "table_name",
     choices=[
+        "stg_gsi_1003_pois",
         "stg_gsi_dm25k_pois",
         "stg_gsi_vtexp_pois",
         "stg_yamap_pois",
@@ -49,8 +50,8 @@ try:
         source_id_subquery = f"(SELECT id AS source_id FROM information_sources WHERE source_table = '{table_name}' LIMIT 1)"
 
     normalization_table = str.maketrans(
-        "篭桧莱壷欝呑屏溪渕秃剥薮﨔繩蝉掴頬箪彌權",  # 異体字、旧字
-        "籠檜萊壺鬱吞屛渓淵禿剝藪欅縄蟬摑頰簞弥権",  # 常用漢字、印刷標準
+        "篭桧莱壷欝呑屏溪渕秃剥薮﨔繩蝉掴頬箪彌權嶽曾棧",  # 異体字、旧字
+        "籠檜萊壺鬱吞屛渓淵禿剝藪欅縄蟬摑頰簞弥権岳曽桟",  # 常用漢字、印刷標準
     )
 
     cursor.execute(
@@ -74,7 +75,9 @@ try:
                 poi_type VARCHAR(255) PATH '$.type'
             )
         ) AS j
+        LEFT JOIN poi_hierarchies AS h ON p.mountain_id = h.child_id
         WHERE j.poi_kana IS NOT NULL AND j.poi_kana <> ''
+        AND (h.child_id IS NULL OR h.parent_name <> j.poi_name OR j.poi_type IN ('MAIN', 'AREA'))
         """,
     )
     values = []
@@ -105,43 +108,35 @@ try:
     # 優先名称の設定
     cursor.execute(
         f"""
-        CREATE TEMPORARY TABLE best_sources AS
-        SELECT 
-            sub.mountain_id,
-            sub.source_id
-        FROM (
+        WITH target_names AS (
+            SELECT DISTINCT
+                mountain_id,
+                poi_name_normalized,
+                poi_kana
+            FROM poi_names
+            WHERE source_id = 9 AND name_type = 'MAIN'
+        ),
+        ranked_sources AS (
             SELECT 
-                pl.mountain_id,
-                pl.source_id,
+                pn.id,
                 ROW_NUMBER() OVER (
-                    PARTITION BY pl.mountain_id
-                    ORDER BY isrc.reliability_level
-                ) as rank_idx
-            FROM poi_links AS pl
-            JOIN poi_names AS pn ON pl.source_uuid = pn.source_uuid
-            JOIN information_sources AS isrc ON pl.source_id = isrc.id
-            WHERE pn.name_type = 'MAIN'
-                AND pn.poi_kana IS NOT NULL
-                AND pn.poi_kana <> ''
-        ) AS sub
-        WHERE sub.rank_idx = 1
-        """,
-    )
-    cursor.execute("ALTER TABLE best_sources ADD PRIMARY KEY (mountain_id)")
-
-    cursor.execute(
-        """
+                    PARTITION BY pn.mountain_id, pn.poi_name_normalized, pn.poi_kana
+                    ORDER BY 
+                        CASE WHEN pn.name_type IN ('MAIN', 'AREA') THEN 0 ELSE 1 END ASC,
+                        src.reliability_level ASC,
+                        pn.id ASC
+                ) AS rn
+            FROM poi_names AS pn
+            JOIN target_names AS tn 
+                ON pn.mountain_id = tn.mountain_id
+            AND pn.poi_name_normalized = tn.poi_name_normalized
+            AND pn.poi_kana = tn.poi_kana
+            JOIN information_sources AS src 
+                ON pn.source_id = src.id
+        )
         UPDATE poi_names AS pn
-        JOIN poi_links AS pl ON pn.source_uuid = pl.source_uuid
-        JOIN mountain_pois AS m ON pl.mountain_id = m.id
-        LEFT JOIN best_sources AS bs ON pl.mountain_id = bs.mountain_id
-        SET pn.is_preferred = CASE 
-            WHEN bs.source_id IS NOT NULL
-                AND pl.source_id = bs.source_id
-                AND pn.name_type = 'MAIN'
-            THEN 1 ELSE 0 
-        END
-        WHERE m.is_used
+        JOIN ranked_sources AS rs ON pn.id = rs.id
+        SET pn.is_preferred = IF(rs.rn = 1, 1, 0);
         """,
     )
     success = True
