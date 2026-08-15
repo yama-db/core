@@ -152,6 +152,17 @@ try:
         (source_id, source_id),
     )
 
+    # 情報源テーブルにリンクした mountain_id を格納
+    cursor.execute(
+        f"""
+        UPDATE `{table_name}` AS s
+        JOIN poi_links AS p 
+            ON s.source_uuid = p.source_uuid AND p.source_id = %s
+        SET s.mountain_id = p.mountain_id
+        """,
+        (source_id,),
+    )
+
     cursor.execute(
         "SELECT COUNT(*) AS linked_count FROM poi_links WHERE source_id = %s",
         (source_id,),
