@@ -1,4 +1,4 @@
-#!/user/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import sys
@@ -49,10 +49,17 @@ try:
     else:
         source_id_subquery = f"(SELECT id AS source_id FROM information_sources WHERE source_table = '{table_name}' LIMIT 1)"
 
-    normalization_table = str.maketrans(
-        "篭桧莱壷欝呑屏溪渕秃剥薮﨔繩蝉掴頬箪彌權嶽曾棧",  # 異体字、旧字
-        "籠檜萊壺鬱吞屛渓淵禿剝藪欅縄蟬摑頰簞弥権岳曽桟",  # 常用漢字、印刷標準
+    cursor.execute(
+        """
+        SELECT src_char, dst_char
+        FROM char_trans_map
+        WHERE hit_count > 0
+        ORDER BY hit_count DESC
+        """
     )
+    rows = cursor.fetchall()
+    print(f"Loaded {len(rows)} character mappings from char_trans_map.")
+    normalization_table = str.maketrans({row['src_char']: row['dst_char'] for row in rows})
 
     cursor.execute(
         f"""
@@ -82,7 +89,7 @@ try:
     )
     values = []
     for row in cursor.fetchall():
-        row["poi_name_normalized"] = row["poi_name_normalized"].translate(
+        row["poi_name_normalized"] = row["poi_name"].translate(
             normalization_table
         )
         values.append(tuple(row.values()))

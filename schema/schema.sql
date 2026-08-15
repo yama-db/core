@@ -53,7 +53,8 @@ CREATE TABLE _stg_template_pois (
     last_updated_at DATETIME COMMENT '更新日時',
     UNIQUE INDEX uq_raw_id (raw_id),
     SPATIAL INDEX (geom),
-    INDEX idx_tile_x_y (x_z18, y_z18)
+    INDEX idx_tile_x_y (x_z18, y_z18),
+    INDEX idx_mountain_id (mountain_id)
 ) COMMENT 'POIテーブル共通構造';
 
 /* names_jsonの例：
@@ -107,7 +108,8 @@ CREATE TABLE stg_book_web_pois (
     z_min INT COMMENT '最小表示Zレベル',
     last_updated_at DATETIME COMMENT '更新日時',
     UNIQUE INDEX uq_source_raw_id (source_id, raw_id),
-    INDEX idx_tile_x_y (x_z18, y_z18)
+    INDEX idx_tile_x_y (x_z18, y_z18),
+    INDEX idx_mountain_id (mountain_id)
 ) COMMENT '書籍・ウェブサイト';
 
 CREATE TABLE mountain_pois (
@@ -148,7 +150,8 @@ CREATE TABLE poi_hierarchies (
     FOREIGN KEY (parent_id) REFERENCES mountain_pois (id)
     ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (child_id) REFERENCES mountain_pois (id)
-    ON DELETE CASCADE ON UPDATE CASCADE
+    ON DELETE CASCADE ON UPDATE CASCADE,
+    INDEX idx_child_id (child_id)
 ) COMMENT '統合POIの階層構造';
 
 CREATE TABLE poi_links (
@@ -159,8 +162,20 @@ CREATE TABLE poi_links (
     PRIMARY KEY (source_uuid, mountain_id),
     FOREIGN KEY (mountain_id) REFERENCES mountain_pois (id),
     FOREIGN KEY (source_id) REFERENCES information_sources (id),
-    INDEX idx_source_uuid (source_uuid)
+    INDEX idx_source_uuid (source_uuid),
+    INDEX idx_mountain_id (mountain_id)
 ) COMMENT '統合POIと情報源の関連付け';
+
+CREATE TABLE char_trans_map (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    src_char VARCHAR(4) COLLATE utf8mb4_bin NOT NULL COMMENT '異体字',
+    dst_char VARCHAR(4) COLLATE utf8mb4_bin NOT NULL COMMENT '変換先',
+    hit_count INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '出現件数',
+    sample_names TEXT COMMENT '出現例（カンマ区切り）',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_src_char (src_char),
+    KEY idx_hit_count (hit_count DESC)
+) COMMENT '異体字変換テーブル';
 
 CREATE TABLE poi_names (
     id INT AUTO_INCREMENT PRIMARY KEY COMMENT '名称ID',
@@ -177,7 +192,8 @@ CREATE TABLE poi_names (
     FOREIGN KEY (mountain_id) REFERENCES mountain_pois (id),
     FOREIGN KEY (source_id) REFERENCES information_sources (id),
     INDEX idx_source_uuid (source_uuid),
-    INDEX idx_poi_name_normalized (poi_name_normalized)
+    INDEX idx_poi_name_normalized (poi_name_normalized),
+    INDEX idx_mountain_id (mountain_id)
 ) COMMENT '統合POI名称';
 
 CREATE TABLE poi_address_map (
@@ -192,6 +208,7 @@ CREATE TABLE poi_address_map (
     FOREIGN KEY (jis_code) REFERENCES administrative_regions (jis_code)
     ON DELETE RESTRICT
 ) COMMENT '統合POIと行政区画の関連付け';
+
 
 CREATE TABLE mountain_records (
     id INT AUTO_INCREMENT PRIMARY KEY COMMENT '山行記録ID',
@@ -217,5 +234,6 @@ CREATE TABLE visited_mountains (
     ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT fk_visited_mountains_poi
     FOREIGN KEY (mountain_id) REFERENCES mountain_pois (id)
-    ON DELETE RESTRICT ON UPDATE CASCADE
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+    INDEX idx_mountain_id (mountain_id)
 ) COMMENT '登頂リスト';
