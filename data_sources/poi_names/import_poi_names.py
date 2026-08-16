@@ -112,40 +112,6 @@ try:
         values,
     )
 
-    # 優先名称の設定
-    cursor.execute(
-        f"""
-        WITH target_names AS (
-            SELECT DISTINCT
-                mountain_id,
-                poi_name_normalized,
-                poi_kana
-            FROM poi_names
-            WHERE source_id = 9 AND name_type = 'MAIN'
-        ),
-        ranked_sources AS (
-            SELECT 
-                pn.id,
-                ROW_NUMBER() OVER (
-                    PARTITION BY pn.mountain_id, pn.poi_name_normalized, pn.poi_kana
-                    ORDER BY 
-                        CASE WHEN pn.name_type IN ('MAIN', 'AREA') THEN 0 ELSE 1 END ASC,
-                        src.reliability_level ASC,
-                        pn.id ASC
-                ) AS rn
-            FROM poi_names AS pn
-            JOIN target_names AS tn 
-                ON pn.mountain_id = tn.mountain_id
-            AND pn.poi_name_normalized = tn.poi_name_normalized
-            AND pn.poi_kana = tn.poi_kana
-            JOIN information_sources AS src 
-                ON pn.source_id = src.id
-        )
-        UPDATE poi_names AS pn
-        JOIN ranked_sources AS rs ON pn.id = rs.id
-        SET pn.is_preferred = IF(rs.rn = 1, 1, 0);
-        """,
-    )
     success = True
 
 except Exception as err:

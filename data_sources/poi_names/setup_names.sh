@@ -26,4 +26,4 @@ for table_name in $SOURCE_TABLES; do
     python3 import_poi_names.py $TRUNCATE $table_name || die "Failed to import $table_name"
     ((i++))
 done
-# python3 import_preferred.py raw/preferred.csv || die "Failed to import preferred names"
+python3 set_preferred.py || die "Failed to set preferred name"
