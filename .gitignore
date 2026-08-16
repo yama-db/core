@@ -216,5 +216,6 @@ tiles/
 work/
 private/
 test/
+upload/
 **/archive/*
 !**/archive/.gitkeep
