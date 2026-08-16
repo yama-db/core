@@ -183,8 +183,7 @@ CREATE TABLE poi_names (
     source_uuid BINARY(16) NOT NULL COMMENT '情報源UUID',
     source_id INT NOT NULL COMMENT '情報源ID',
     poi_name VARCHAR(255) COLLATE utf8mb4_bin NOT NULL COMMENT '名称',
-    poi_name_normalized VARCHAR(255)
-    COLLATE utf8mb4_bin NOT NULL COMMENT '検索用正規化名称',
+    poi_name_normalized VARCHAR(255) NOT NULL COMMENT '検索用正規化名称',
     poi_kana VARCHAR(255) COLLATE utf8mb4_bin NOT NULL COMMENT 'よみがな',
     name_type ENUM(
         'MAIN', 'AREA', 'SUB_PEAK', 'ALIAS'
