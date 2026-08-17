@@ -25,7 +25,7 @@ CREATE TABLE administrative_boundaries (
 ) COMMENT '行政区画境界データ';
 
 CREATE TABLE information_sources (
-    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '情報源ID',
+    id INT PRIMARY KEY COMMENT '情報源ID',
     info_type ENUM('DATASET', 'BOOK', 'WEBPAGE') NOT NULL COMMENT '情報源種別',
     source_table VARCHAR(64) COLLATE ascii_bin NOT NULL COMMENT '参照先テーブル名',
     display_name VARCHAR(100) NOT NULL UNIQUE COMMENT '表示用名称',

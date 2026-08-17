@@ -1,4 +1,5 @@
 id,info_type,source_table,display_name,url,reliability_level
+0,DATASET,_stg_template_pois,全国,,0
 1,DATASET,stg_gsi_gcp_pois,基盤地図,,0
 2,DATASET,stg_gsi_1003_pois,1003山,,10
 3,DATASET,stg_gsi_dm25k_pois,数値地図,,70
