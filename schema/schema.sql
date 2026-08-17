@@ -193,7 +193,8 @@ CREATE TABLE poi_names (
     FOREIGN KEY (source_id) REFERENCES information_sources (id),
     INDEX idx_source_uuid (source_uuid),
     INDEX idx_poi_name_normalized (poi_name_normalized),
-    INDEX idx_mountain_id (mountain_id)
+    INDEX idx_mountain_id (mountain_id),
+    INDEX idx_poi_names_lookup (source_id, name_type, mountain_id, poi_name)
 ) COMMENT '統合POI名称';
 
 CREATE TABLE poi_address_map (
