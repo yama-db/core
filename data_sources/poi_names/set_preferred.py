@@ -44,7 +44,18 @@ try:
         )
         UPDATE poi_names AS pn
         LEFT JOIN qualified_ranked AS qr ON pn.id = qr.id
-        SET pn.is_preferred = IF(qr.rn = 1, 1, 0);
+        SET pn.is_preferred = IF(qr.rn = 1, 1, 0)
+        """,
+    )
+    cursor.execute(
+        """
+        UPDATE mountain_pois AS m
+        JOIN poi_names AS p 
+        ON m.id = p.mountain_id 
+        AND p.is_preferred = 1
+        SET 
+        m.main_name = p.poi_name,
+        m.main_kana = p.poi_kana
         """,
     )
     success = True
