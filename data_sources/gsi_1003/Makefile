@@ -20,6 +20,7 @@ archive/1003zan$(VERSION).zip: | archive
 
 archive/1003zan$(VERSION).geojson: archive/1003zan$(VERSION).zip
 	unzip archive/1003zan$(VERSION).zip -d archive
+	touch $@
 
 import: dist/$(SOURCE).tsv
 	python3 ../import_pois.py --truncate $(TABLE_NAME) $<
