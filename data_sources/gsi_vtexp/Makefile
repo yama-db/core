@@ -5,7 +5,7 @@ TABLE_NAME := stg_gsi_vtexp_pois
 
 all: dist/gsi_vtexp.tsv
 
-dist:
+dist archive:
 	mkdir -p $@
 
 dist/gsi_vtexp.tsv: extract_features.py raw/gsi_vtexp_corrections.csv archive/.downloaded | dist
@@ -13,7 +13,7 @@ dist/gsi_vtexp.tsv: extract_features.py raw/gsi_vtexp_corrections.csv archive/.d
 
 extract_features.py: ../../shared/extract_aliases.py
 
-archive/.downloaded:
+archive/.downloaded: | archive
 	@echo "Please run './get_tiles.sh' to download VTEXP tiles."
 	@echo "It may take a long time and a large amount of disk space."
 	@exit 1

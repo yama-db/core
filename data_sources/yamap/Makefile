@@ -10,7 +10,7 @@ dist work:
 	mkdir -p $@
 
 dist/$(SOURCE).tsv: work/$(SOURCE)_fixed.tsv ../yama2tsv.py | dist
-	python3 ../yama2tsv.py $< > $@ 2> log.txt
+	python3 ../yama2tsv.py $< > $@
 
 ../yama2tsv.py: ../../shared/extract_aliases.py
 

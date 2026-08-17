@@ -7,7 +7,7 @@ VERSION := 20260331
 
 all: dist/$(SOURCE).tsv
 
-dist work:
+dist archive:
 	mkdir -p $@
 
 dist/$(SOURCE).tsv: archive/1003zan$(VERSION).geojson geojson2tsv.py | dist
@@ -15,9 +15,11 @@ dist/$(SOURCE).tsv: archive/1003zan$(VERSION).geojson geojson2tsv.py | dist
 
 geojson2tsv.py: ../../shared/extract_aliases.py
 
-archive/1003zan$(VERSION).geojson:
-	wget -O $(basename $@) https://www.gsi.go.jp/KOKUJYOHO/MOUNTAIN/1003zan$(VERSION).zip
-	unzip $(basename $@) -d archive
+archive/1003zan$(VERSION).zip: | archive
+	wget -O $@ https://www.gsi.go.jp/KOKUJYOHO/MOUNTAIN/1003zan$(VERSION).zip
+
+archive/1003zan$(VERSION).geojson: archive/1003zan$(VERSION).zip
+	unzip archive/1003zan$(VERSION).zip -d archive
 
 import: dist/$(SOURCE).tsv
 	python3 ../import_pois.py --truncate $(TABLE_NAME) $<
