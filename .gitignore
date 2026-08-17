@@ -217,5 +217,4 @@ work/
 private/
 test/
 upload/
-**/archive/*
-!**/archive/.gitkeep
+archive/
