@@ -1,47 +1,47 @@
-id,info_type,source_table,display_name,url,reliability_level
-0,DATASET,_stg_template_pois,全国,,0
-1,DATASET,stg_gsi_gcp_pois,基盤地図,,0
-2,DATASET,stg_gsi_1003_pois,1003山,,10
-3,DATASET,stg_gsi_dm25k_pois,数値地図,,70
-4,DATASET,stg_gsi_vtexp_pois,地形図,,20
-5,DATASET,stg_wikidata_pois,ウィキ,https://www.wikidata.org/wiki/Special:GoToLinkedPage/jawiki/{raw_id},80
-6,DATASET,stg_yamap_pois,ヤマップ,https://yamap.com/landmarks/{raw_id},60
-7,DATASET,stg_yamareco_pois,ヤマレコ,https://www.yamareco.com/modules/yamainfo/ptinfo.php?ptid={raw_id},90
-9,DATASET,stg_legacy_pois,その他,,100
-10,BOOK,stg_book_web_pois,静岡の百山,http://id.ndl.go.jp/bib/000002152914,50
-11,BOOK,stg_book_web_pois,石川の山,http://id.ndl.go.jp/bib/000002016598,50
-12,BOOK,stg_book_web_pois,大分の山,http://id.ndl.go.jp/bib/000001972726,50
-13,BOOK,stg_book_web_pois,大分300山超,http://id.ndl.go.jp/bib/032087116,45
-14,BOOK,stg_book_web_pois,大分250山超,http://id.ndl.go.jp/bib/032842477,45
-15,BOOK,stg_book_web_pois,奈良名山案内,http://id.ndl.go.jp/bib/025575741,50
-16,BOOK,stg_book_web_pois,富山県山名録,http://id.ndl.go.jp/bib/000003001579,45
-17,BOOK,stg_book_web_pois,福井の山150,http://id.ndl.go.jp/bib/000002022656,50
-18,BOOK,stg_book_web_pois,房総山岳志,http://id.ndl.go.jp/bib/000007929820,50
-19,BOOK,stg_book_web_pois,防長百山,http://id.ndl.go.jp/bib/000002272417,50
-20,BOOK,stg_book_web_pois,鈴鹿300,http://id.ndl.go.jp/bib/000008356994,50
-21,BOOK,stg_book_web_pois,群馬300上,http://id.ndl.go.jp/bib/000007823437,50
-22,BOOK,stg_book_web_pois,群馬300下,http://id.ndl.go.jp/bib/000007823433,50
-23,BOOK,stg_book_web_pois,栃木273山,http://id.ndl.go.jp/bib/000002837608,50
-24,BOOK,stg_book_web_pois,桐生100山,http://id.ndl.go.jp/bib/029190728,45
-25,BOOK,stg_book_web_pois,ひろしま百山,http://id.ndl.go.jp/bib/000002726373,50
-26,BOOK,stg_book_web_pois,兵庫100山,http://id.ndl.go.jp/bib/024941725,50
-27,BOOK,stg_book_web_pois,京都府山岳総覧,http://id.ndl.go.jp/bib/027567206,50
-28,BOOK,stg_book_web_pois,岩手の山150,http://id.ndl.go.jp/bib/000011289587,50
-29,BOOK,stg_book_web_pois,ぎふ百山,http://id.ndl.go.jp/bib/000001221325,50
-30,BOOK,stg_book_web_pois,続ぎふ百山,http://id.ndl.go.jp/bib/000002799684,50
-31,BOOK,stg_book_web_pois,栃木百名山,http://id.ndl.go.jp/bib/023355106,50
-32,WEBPAGE,stg_book_web_pois,埼玉百山,https://shinhaiurawa.sakura.ne.jp/Gyoji/100yama/Saitama100yama.pdf,50
-33,BOOK,stg_book_web_pois,信州百名山,http://id.ndl.go.jp/bib/000008459396,50
-34,WEBPAGE,stg_book_web_pois,ぐんま百名山,https://www.pref.gunma.jp/page/170435.html,50
-35,WEBPAGE,stg_book_web_pois,山梨百名山,https://www.yamanashi-kankou.jp/nature/hyakumeizan/,50
-36,BOOK,stg_book_web_pois,うつくしま百名山,http://id.ndl.go.jp/bib/000002796286,50
-37,WEBPAGE,stg_book_web_pois,足利百名山,,50
-38,BOOK,stg_book_web_pois,越後百山,http://id.ndl.go.jp/bib/000002984102,50
-39,BOOK,stg_book_web_pois,新うつくしま百名山,http://id.ndl.go.jp/bib/032411611,50
-40,WEBPAGE,stg_book_web_pois,かながわ百名山,https://www.kanaloco.jp/news/life/kanagawa_mt100.html,50
-41,WEBPAGE,stg_book_web_pois,東京百名山,https://nhc.matrix.jp/tokyo100/,50
-42,WEBPAGE,stg_book_web_pois,日本三百名山,https://jac1.or.jp/wp-content/uploads/2016/10/300meizanlist%E3%80%80.pdf,50
-43,BOOK,stg_book_web_pois,かながわ山岳誌,http://id.ndl.go.jp/bib/033306040,45
-44,WEBPAGE,stg_book_web_pois,やまの町桐生,https://akanekopn.web.fc2.com/,50
-45,WEBPAGE,stg_book_web_pois,宍粟50名山,https://shiso.or.jp/famous_mountain,50
-46,WEBPAGE,stg_book_web_pois,水窪100山,https://yamaniikiru.com/100yama-hyo.htm,50
+id,info_type,source_table,display_name,reliability_rank,full_name,url
+0,DATASET,_stg_template_pois,全国,0,全国,
+1,DATASET,stg_gsi_gcp_pois,基盤地図,0,,
+2,DATASET,stg_gsi_1003_pois,1003山,10,日本の主な山岳標高（1003山）,
+3,DATASET,stg_gsi_dm25k_pois,数値地図,70,数値地図25000（地名・公共施設）,
+4,DATASET,stg_gsi_vtexp_pois,地形図,20,国土地理院ベクトルタイル提供実験：地名情報（自然地名）,
+5,DATASET,stg_wikidata_pois,ウィキ,80,ウィキペディア日本語版,
+6,DATASET,stg_yamap_pois,ヤマップ,60,ヤマップ（YAMAP）,
+7,DATASET,stg_yamareco_pois,ヤマレコ,90,ヤマレコ（Yamareco）,
+9,DATASET,stg_legacy_pois,その他,100,その他（独自選定・個別資料）,
+10,BOOK,stg_book_web_pois,静岡の百山,50,静岡百山研究会 編『静岡の百山』（1991）,http://id.ndl.go.jp/bib/000002152914
+11,BOOK,stg_book_web_pois,石川の山,50,石川の山編集委員会 編『石川の山』（1989）,http://id.ndl.go.jp/bib/000002016598
+12,BOOK,stg_book_web_pois,大分の山,50,梅木秀徳 編著『大分の山 : 大分県主要山岳丘陵一覧』（1987）,http://id.ndl.go.jp/bib/000001972726
+13,BOOK,stg_book_web_pois,大分300山超,45,菅博行 著『大分三百山超 : 大分のかくれた名山たち : 登山ガイド. 第2集』（2022）,http://id.ndl.go.jp/bib/032087116
+14,BOOK,stg_book_web_pois,大分250山超,45,菅博行 著『大分二百五十山超 : 登山ガイド : 大分のかくれた名山たち第一集』（2023）,http://id.ndl.go.jp/bib/032842477
+15,BOOK,stg_book_web_pois,奈良名山案内,50,エスカルゴ山の会関西支部 編著『奈良名山案内 : 世界遺産の峰めぐり』（2014）,http://id.ndl.go.jp/bib/025575741
+16,BOOK,stg_book_web_pois,富山県山名録,45,"橋本廣, 佐伯邦夫 編『富山県山名録』（2001）",http://id.ndl.go.jp/bib/000003001579
+17,BOOK,stg_book_web_pois,福井の山150,50,増永迪男 著『福井の山150』（1989）,http://id.ndl.go.jp/bib/000002022656
+18,BOOK,stg_book_web_pois,房総山岳志,50,内田栄一 著『房総山岳志』（2005）,http://id.ndl.go.jp/bib/000007929820
+19,BOOK,stg_book_web_pois,防長百山,50,安倍正道 著『防長百山』（1992）,http://id.ndl.go.jp/bib/000002272417
+20,BOOK,stg_book_web_pois,鈴鹿300,50,西内正弘 著『鈴鹿の山万能ガイド : ハイキングマップで歩く』（2006）,http://id.ndl.go.jp/bib/000008356994
+21,BOOK,stg_book_web_pois,群馬300上,50,横田昭二 著『私が登った群馬300山. 上巻』（2005）,http://id.ndl.go.jp/bib/000007823437
+22,BOOK,stg_book_web_pois,群馬300下,50,横田昭二 著『私が登った群馬300山. 下巻』（2005）,http://id.ndl.go.jp/bib/000007823433
+23,BOOK,stg_book_web_pois,栃木273山,50,倉持裕至 著『栃木273山 : 女房殿と歩いたリハビリ山日記』（1999）,http://id.ndl.go.jp/bib/000002837608
+24,BOOK,stg_book_web_pois,桐生100山,45,増田宏 著『桐生・山の地誌』（2018）,http://id.ndl.go.jp/bib/029190728
+25,BOOK,stg_book_web_pois,ひろしま百山,50,広島県山岳連盟 監修ほか『ひろしま百山』（1998）,http://id.ndl.go.jp/bib/000002726373
+26,BOOK,stg_book_web_pois,兵庫100山,50,兵庫県山岳連盟 編『ふるさと兵庫100山』（2013）,http://id.ndl.go.jp/bib/024941725
+27,BOOK,stg_book_web_pois,京都府山岳総覧,50,"内田嘉弘, 竹内康之 編著『京都府山岳総覧 : 京都府339山案内』（2016）",http://id.ndl.go.jp/bib/027567206
+28,BOOK,stg_book_web_pois,岩手の山150,50,阿部陽子 著『岩手の山150 : 阿部陽子の里山スケッチ』（2011）,http://id.ndl.go.jp/bib/000011289587
+29,BOOK,stg_book_web_pois,ぎふ百山,50,岐阜県山岳連盟 編『ぎふ百山』（1975）,http://id.ndl.go.jp/bib/000001221325
+30,BOOK,stg_book_web_pois,続ぎふ百山,50,"岐阜新聞社, 岐阜県山岳連盟 企画・編集『続ぎふ百山』（1993）",http://id.ndl.go.jp/bib/000002799684
+31,BOOK,stg_book_web_pois,栃木百名山,50,栃木県山岳連盟 監修『栃木百名山ガイドブック』（2012）,http://id.ndl.go.jp/bib/023355106
+32,WEBPAGE,stg_book_web_pois,埼玉百山,50,新ハイキングクラブ浦和支部HP『みんなで歩いた埼玉百山』（2014）,https://shinhaiurawa.sakura.ne.jp/Gyoji/100yama/Saitama100yama.pdf
+33,BOOK,stg_book_web_pois,信州百名山,50,清水栄一 著『信州百名山』（1999）,http://id.ndl.go.jp/bib/000008459396
+34,BOOK,stg_book_web_pois,ぐんま百名山,50,横田昭二 調査・執筆ほか『ぐんま百名山まるごとガイド』（2007）,http://id.ndl.go.jp/bib/000009106025
+35,BOOK,stg_book_web_pois,山梨百名山,50,山梨日日新聞社編集局 編ほか『山梨百名山』（1998）,http://id.ndl.go.jp/bib/000002738494
+36,BOOK,stg_book_web_pois,うつくしま百名山,50,うつくしま百名山選定委員 編『うつくしま百名山 : 福島県のふるさとの山々』（1999）,http://id.ndl.go.jp/bib/000002796286
+37,WEBPAGE,stg_book_web_pois,足利百名山,50,田中良房 編『足利百名山位置図』,
+38,BOOK,stg_book_web_pois,越後百山,50,佐藤れい子 著『越後百山 : 新潟の山をめぐる登山紀行』（2001）,http://id.ndl.go.jp/bib/000002984102
+39,BOOK,stg_book_web_pois,新うつくしま百名山,50,奥田博 著『新うつくしま百名山 : 福島県のふるさとの山々』（2021）,http://id.ndl.go.jp/bib/032411611
+40,WEBPAGE,stg_book_web_pois,かながわ百名山,50,神奈川新聞HP『神奈川の山１００選「かながわ百名山」まとめ』,https://www.kanaloco.jp/news/life/kanagawa_mt100.html
+41,WEBPAGE,stg_book_web_pois,東京百名山,50,日本ハイキング倶楽部HP『東京百名山』,https://nhc.matrix.jp/tokyo100/
+42,BOOK,stg_book_web_pois,日本三百名山,50,日本山岳会HP『日本山岳会編 新版 日本三百名山 登山ガイド(2014)掲載 山岳リスト』,http://id.ndl.go.jp/bib/000002577655
+43,BOOK,stg_book_web_pois,かながわ山岳誌,45,日本山岳会神奈川支部 著『かながわ山岳誌 : 県内のほぼすべての山の踏査記録と学術・文化情報』（2024）,http://id.ndl.go.jp/bib/033306040
+44,WEBPAGE,stg_book_web_pois,やまの町桐生,50,楚巒山楽会代表幹事HP『やまの町桐生』,https://akanekopn.web.fc2.com/
+45,WEBPAGE,stg_book_web_pois,宍粟50名山,50,しそう森林王国観光協会HP『宍粟50名山』,https://shiso.or.jp/famous_mountain
+46,WEBPAGE,stg_book_web_pois,水窪100山,50,NPO法人 山に生きる会HP『水窪100山』,https://yamaniikiru.com/100yama-hyo.htm

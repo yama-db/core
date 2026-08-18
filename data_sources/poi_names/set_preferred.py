@@ -31,7 +31,7 @@ try:
                     PARTITION BY pn.mountain_id
                     ORDER BY 
                         CASE WHEN pn.name_type IN ('MAIN', 'AREA') THEN 0 ELSE 1 END ASC,
-                        src.reliability_level ASC,
+                        src.reliability_rank ASC,
                         pn.id ASC
                 ) AS rn
             FROM poi_names AS pn

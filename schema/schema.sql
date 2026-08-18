@@ -29,8 +29,9 @@ CREATE TABLE information_sources (
     info_type ENUM('DATASET', 'BOOK', 'WEBPAGE') NOT NULL COMMENT '情報源種別',
     source_table VARCHAR(64) COLLATE ascii_bin NOT NULL COMMENT '参照先テーブル名',
     display_name VARCHAR(100) NOT NULL UNIQUE COMMENT '表示用名称',
-    url VARCHAR(2083) COMMENT '情報源URL',
-    reliability_level TINYINT NOT NULL DEFAULT 50 COMMENT '信頼度順位（0が最高）'
+    reliability_rank TINYINT NOT NULL DEFAULT 50 COMMENT '信頼度順位（0が最高）',
+    full_name VARCHAR(255) COMMENT '名称',
+    url VARCHAR(2083) COMMENT 'URL'
 ) COMMENT '情報源リスト';
 
 CREATE TABLE _stg_template_pois (
