@@ -12,7 +12,20 @@ from shared import db_util, generate_source_uuid, tile_utils
 
 # コマンドライン引数の解析
 parser = ArgumentParser(description="POIのTSVファイルをDBに登録")
-parser.add_argument("table_name", help="登録先のテーブル名")
+parser.add_argument(
+    "table_name",
+    choices=[
+        "stg_gsi_gcp_pois",
+        "stg_gsi_1003_pois",
+        "stg_gsi_dm25k_pois",
+        "stg_gsi_vtexp_pois",
+        "stg_wikidata_pois",
+        "stg_yamap_pois",
+        "stg_yamareco_pois",
+        "stg_legacy_pois",
+    ],
+    help="登録先のテーブル名"
+)
 parser.add_argument("tsv_file", help="POIのTSVファイル・パス")
 parser.add_argument(
     "-m",
@@ -33,10 +46,10 @@ truncate = args.truncate
 query_insert = f"""
     INSERT INTO `{table_name}` (
         source_uuid, raw_id, raw_type, names_json,
-        geom, elevation, x_z18, y_z18, z_min, last_updated_at
+        geom, elevation, last_updated_at
     ) VALUES (
         %s, %s, %s, %s,
-        ST_GeomFromText(%s, 4326, "axis-order=long-lat"), %s, %s, %s, %s, %s
+        ST_GeomFromText(%s, 4326, "axis-order=long-lat"), %s, %s
     )
     ON DUPLICATE KEY UPDATE
         names_json = JSON_MERGE_PRESERVE(names_json, VALUES(names_json))
@@ -69,10 +82,8 @@ try:
             lat = row["lat"]
             if lon and lat:
                 coord = f"POINT({lon} {lat})"
-                x_z18, y_z18 = tile_utils.lnglat_to_tile(float(lon), float(lat), 18)
             else:
                 coord = None
-                x_z18, y_z18 = (None, None)
             values.append(
                 (
                     uuid.bytes,
@@ -81,9 +92,6 @@ try:
                     row["names_json"],
                     coord,
                     row["elevation"] or None,
-                    x_z18,
-                    y_z18,
-                    row["z_min"] or None,
                     row["last_updated_at"] or None,
                 )
             )

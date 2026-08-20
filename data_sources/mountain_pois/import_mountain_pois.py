@@ -41,21 +41,23 @@ try:
             lat = row["lat"]
             lon = row["lon"]
             if lon and lat:
-                x_z18, y_z18 = tile_utils.lnglat_to_tile(float(lon), float(lat), 18)
+                tile_x_z13, tile_y_z13, local_x_z13, local_y_z13 = tile_utils.lonlat_to_tile_coords(float(lat), float(lon), 13)
+                local_x_z13 = int(local_x_z13 * 64)
+                local_y_z13 = int(local_y_z13 * 64)
             else:
-                x_z18, y_z18 = (None, None)
+                tile_x_z13, tile_y_z13, local_x_z13, local_y_z13 = (None, None, None, None)
             alt = row["alt"]
             values.append(
-                (is_used, name, kana, f"POINT({lon} {lat})", alt, x_z18, y_z18)
+                (is_used, name, kana, f"POINT({lon} {lat})", alt, tile_x_z13, tile_y_z13, local_x_z13, local_y_z13)
             )
 
     cursor.executemany(
         f"""
         INSERT INTO {table_name} (
-            is_used, main_name, main_kana, geom, elevation, x_z18, y_z18
+            is_used, main_name, main_kana, geom, elevation, tile_x_z13, tile_y_z13, local_x_z13, local_y_z13
         ) VALUES (
             %s, %s, %s,
-            ST_GeomFromText(%s, 4326, "axis-order=long-lat"), %s, %s, %s
+            ST_GeomFromText(%s, 4326, "axis-order=long-lat"), %s, %s, %s, %s, %s
         )
         """,
         values,

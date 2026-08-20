@@ -69,18 +69,68 @@ def lnglat_to_tile_fraction(lon: float, lat: float, zoom: int) -> tuple[float, f
     return x_fraction, y_fraction
 
 
-if __name__ == "__main__":
-    # テストデータ: 富士山頂（剣ヶ峰）の座標
-    fuji_lon = 138.727778
-    fuji_lat = 35.360556
+def lonlat_to_tile_coords(
+    lat: float, lon: float, z: int, extent: int = 4096
+) -> tuple[int, int, float, float]:
+    """緯度・経度・ズームレベルからタイル番号とタイル内相対座標（実数値）を計算する。
 
-    print("--- 富士山頂のタイル座標計算 ---")
-    for z in [0, 5, 10, 15, 18]:
-        x, y = lnglat_to_tile(fuji_lon, fuji_lat, zoom=z)
-        print(f"ズームレベル z={z:2d}  ->  タイル座標 (x: {x}, y: {y})")
-        # 地図URLの例
-        print(
-            f"  地理院地図URL: https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png"
-        )
+    Parameters
+    ----------
+    lat : float
+        緯度 (-85.05112878 <= lat <= 85.05112878)
+    lon : float
+        経度 (-180.0 <= lon <= 180.0)
+    z : int
+        ズームレベル
+    extent : int, optional
+        タイルの解像度 (デフォルト: 4096)
+
+    Returns
+    -------
+    tuple[int, int, float, float]
+        (tile_x, tile_y, local_x, local_y)
+        - tile_x, tile_y: タイルインデックス (int)
+        - local_x, local_y: タイル内相対座標の実数値 (float, 0.0 <= val < extent)
+
+    """
+    n = 1 << z  # 2^z
+
+    # 1. 経度・緯度からグローバルなタイル座標（小数含む）を算出 (Webメルカトル)
+    global_x = (lon + 180.0) / 360.0 * n
+
+    lat_rad = math.radians(lat)
+    global_y = (
+        (1.0 - math.asinh(math.tan(lat_rad)) / math.pi) / 2.0 * n
+    )  # math.log(math.tan(...) + 1/math.cos(...)) と等価
+
+    # 2. タイル番号 (整数部)
+    tile_x = int(global_x)
+    tile_y = int(global_y)
+
+    # 3. タイル内相対座標 (小数部 * extent)
+    local_x = (global_x - tile_x) * extent
+    local_y = (global_y - tile_y) * extent
+
+    return tile_x, tile_y, local_x, local_y
+
+
+# --------------------------------------------------
+# 使用例（東京駅: 経度 139.767125, 緯度 35.681236, z=13）
+# --------------------------------------------------
+if __name__ == "__main__":
+    lat = 35.681236
+    lon = 139.767125
+    z = 13
+
+    tile_x, tile_y, local_x, local_y = lonlat_to_tile_coords(lat, lon, z)
+
+    print(f"ズームレベル: Z={z}")
+    print(f"タイル座標  : ({tile_x}, {tile_y})")
+    print(f"タイル内座標: ({local_x:.6f}, {local_y:.6f})")
+
+    # 前述の固定小数点化（128倍 / << 7）して整数保存する場合の値
+    scaled_x = round(local_x * 128)
+    scaled_y = round(local_y * 128)
+    print(f"DB格納用(128倍整数): local_x={scaled_x}, local_y={scaled_y}")
 
 # __END__

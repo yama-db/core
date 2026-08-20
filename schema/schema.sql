@@ -48,13 +48,9 @@ CREATE TABLE _stg_template_pois (
         st_longitude(geom)
     ) STORED COMMENT '経度',
     elevation DECIMAL(7, 2) COMMENT '標高[m]',
-    x_z18 MEDIUMINT UNSIGNED COMMENT 'タイルX座標',
-    y_z18 MEDIUMINT UNSIGNED COMMENT 'タイルY座標',
-    z_min INT COMMENT '最小表示Zレベル',
     last_updated_at DATETIME COMMENT '更新日時',
     UNIQUE INDEX uq_raw_id (raw_id),
     SPATIAL INDEX (geom),
-    INDEX idx_tile_x_y (x_z18, y_z18),
     INDEX idx_mountain_id (mountain_id)
 ) COMMENT 'POIテーブル共通構造';
 
@@ -104,12 +100,8 @@ CREATE TABLE stg_book_web_pois (
         if(geom IS NOT NULL, st_longitude(geom), NULL)
     ) STORED COMMENT '経度',
     elevation DECIMAL(7, 2) COMMENT '標高[m]',
-    x_z18 MEDIUMINT UNSIGNED COMMENT 'タイルX座標',
-    y_z18 MEDIUMINT UNSIGNED COMMENT 'タイルY座標',
-    z_min INT COMMENT '最小表示Zレベル',
     last_updated_at DATETIME COMMENT '更新日時',
     UNIQUE INDEX uq_source_raw_id (source_id, raw_id),
-    INDEX idx_tile_x_y (x_z18, y_z18),
     INDEX idx_mountain_id (mountain_id)
 ) COMMENT '書籍・ウェブサイト';
 
@@ -127,12 +119,14 @@ CREATE TABLE mountain_pois (
         st_longitude(geom)
     ) STORED COMMENT '経度',
     elevation DECIMAL(7, 2) NOT NULL COMMENT '標高',
-    x_z18 MEDIUMINT UNSIGNED COMMENT 'タイルX座標',
-    y_z18 MEDIUMINT UNSIGNED COMMENT 'タイルY座標',
+    tile_x_z13 MEDIUMINT UNSIGNED COMMENT 'タイルX座標',
+    tile_y_z13 MEDIUMINT UNSIGNED COMMENT 'タイルY座標',
     z_min INT COMMENT '最小表示Zレベル',
+    local_x_z13 MEDIUMINT UNSIGNED COMMENT 'タイル内相対X座標*64',
+    local_y_z13 MEDIUMINT UNSIGNED COMMENT 'タイル内相対Y座標*64',
     last_updated_at DATETIME COMMENT '更新日時',
     SPATIAL INDEX (geom),
-    INDEX idx_tile_x_y (x_z18, y_z18),
+    INDEX idx_tile_x_y (tile_x_z13, tile_y_z13),
     CONSTRAINT fk_mountain_main_child
     FOREIGN KEY (main_child_id) REFERENCES mountain_pois (id)
     ON DELETE SET NULL ON UPDATE CASCADE
