@@ -19,19 +19,22 @@ header = [
     "lat",
     "lon",
     "elevation",
-    "z_min",
+    "point_grade",
     "last_updated_at",
 ]
 
-z_min_mapping = {
-    "電子基準点": 7,
-    "一等三角点": 7,
-    "二等三角点": 9,
-    "三等三角点": 10,
-    "四等三角点": 11,
-    "経緯度原点": 11,
-    "地殻変動観測点": 11,
-    "標高点": 12,
+point_grade_mapping = {
+    "電子基準点": 0,
+    "一等三角点": 1,
+    "二等三角点": 2,
+    "三等三角点": 3,
+    "四等三角点": 4,
+    "経緯度原点": 4,
+    "地殻変動観測点": 4,
+    "GPS固定点": 4,
+    "標高点": 5,
+    "その他": 6,
+    "等高線": 7,
 }
 
 print("\t".join(header))
@@ -63,7 +66,7 @@ for f in sys.argv[1:]:
             names_json = {"name": name, "kana": ""}
             raw_id = pt.find("fid", namespaces).text
             lat, lon = pt.find("pos/gml:Point/gml:pos", namespaces).text.split()
-            z_min = z_min_mapping.get(raw_type, 13)
+            point_grade = point_grade_mapping[raw_type]
             elevation = getattr(pt.find("alti", namespaces), "text", "")
             if elevation is None or elevation == "":
                 print(
@@ -79,7 +82,7 @@ for f in sys.argv[1:]:
                 lat,
                 lon,
                 elevation,
-                z_min,
+                point_grade,
                 last_update_at,
             ]
             print("\t".join(map(str, output_row)))

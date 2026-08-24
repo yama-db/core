@@ -15,13 +15,7 @@ parser = ArgumentParser(description="POIのTSVファイルをDBに登録")
 parser.add_argument(
     "table_name",
     choices=[
-        "stg_gsi_1003_pois",
-        "stg_gsi_dm25k_pois",
-        "stg_gsi_vtexp_pois",
-        "stg_wikidata_pois",
-        "stg_yamap_pois",
-        "stg_yamareco_pois",
-        "stg_legacy_pois",
+        "stg_gsi_gcp_pois",
     ],
     help="登録先のテーブル名"
 )
@@ -45,10 +39,10 @@ truncate = args.truncate
 query_insert = f"""
     INSERT INTO `{table_name}` (
         source_uuid, raw_id, raw_type, names_json,
-        geom, elevation, last_updated_at
+        geom, elevation, last_updated_at, point_grade
     ) VALUES (
         %s, %s, %s, %s,
-        ST_GeomFromText(%s, 4326, "axis-order=long-lat"), %s, %s
+        ST_GeomFromText(%s, 4326, "axis-order=long-lat"), %s, %s, %s
     )
     ON DUPLICATE KEY UPDATE
         names_json = JSON_MERGE_PRESERVE(names_json, VALUES(names_json))
@@ -92,6 +86,7 @@ try:
                     coord,
                     row["elevation"] or None,
                     row["last_updated_at"] or None,
+                    row["point_grade"] or None,
                 )
             )
             count += 1

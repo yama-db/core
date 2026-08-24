@@ -30,6 +30,18 @@ table_name = args.table_name
 radius = args.radius
 truncate = args.truncate
 
+# 地点等級（point_grade）と最小表示Zレベル（z_min）のマッピング
+z_min_mapping = [
+    7,   # 0:電子基準点
+    7,   # 1:一等三角点
+    9,   # 2:二等三角点
+    10,  # 3:三等三角点
+    11,  # 4:四等三角点
+    12,  # 5:標高点
+    13,  # 6:その他
+    13,  # 7:等高線
+]
+
 # MySQL接続の確立
 conn = None
 cursor = None
@@ -92,27 +104,35 @@ try:
                 f"No GCP POI found within {radius}m for mountain_id {id}",
                 file=sys.stderr,
             )
-            z_min = 13  # デフォルトの最小表示Zレベルを設定
+            point_grade = 7  # デフォルトの地点等級を等高線に設定
+            z_min = z_min_mapping[point_grade]
             cursor.execute(
-                "UPDATE mountain_pois SET z_min = %s WHERE id = %s",
-                (z_min, id),
+                """
+                UPDATE mountain_pois
+                SET
+                    point_grade = %s,
+                    z_min = %s
+                WHERE id = %s
+                """,
+                (point_grade, z_min, id),
             )
             continue
 
         source_uuid = result["source_uuid"]
 
-        # バッファ内で最小のズームレベルを取得
+        # バッファ内で最優先の地点等級を取得
         cursor.execute(
             f"""
-            SELECT z_min
+            SELECT point_grade
             FROM `{table_name}`
             WHERE ST_Within(geom, @buffer)
-            ORDER BY z_min ASC
+            ORDER BY point_grade ASC
             LIMIT 1
             """,
         )
         result = cursor.fetchone()  # 少なくとも１つはある。
-        z_min = result["z_min"]
+        point_grade = int(result["point_grade"])
+        z_min = z_min_mapping[point_grade]
 
         # 山岳統合POIの地理座標、標高、最小表示Zレベルを更新
         cursor.execute(
@@ -122,10 +142,11 @@ try:
             SET 
                 target.geom = source.geom,
                 target.elevation = source.elevation,
+                target.point_grade = %s,
                 target.z_min = %s
             WHERE target.id = %s
             """,
-            (source_uuid, z_min, id),
+            (source_uuid, point_grade, z_min, id),
         )
 
         # 統合POIと情報源を関連付ける

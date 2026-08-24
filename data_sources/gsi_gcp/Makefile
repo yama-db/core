@@ -16,10 +16,10 @@ work/.extracted:
 	./extract_xml.sh
 	touch $@
 
-import: dist/gsi_gcp.tsv
-	python3 ../import_pois.py --truncate $(TABLE_NAME) $<
+import: dist/gsi_gcp.tsv import_gcp.py
+	python3 import_gcp.py --truncate $(TABLE_NAME) $<
 
-unify:
+unify: unify_gcp.py
 	python3 unify_gcp.py --truncate $(TABLE_NAME)
 
 clean:
