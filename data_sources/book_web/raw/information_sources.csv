@@ -45,3 +45,4 @@ id,info_type,source_table,display_name,reliability_rank,full_name,url
 44,WEBPAGE,stg_book_web_pois,やまの町桐生,50,楚巒山楽会代表幹事HP『やまの町桐生』,https://akanekopn.web.fc2.com/
 45,WEBPAGE,stg_book_web_pois,宍粟50名山,50,しそう森林王国観光協会HP『宍粟50名山』,https://shiso.or.jp/famous_mountain
 46,WEBPAGE,stg_book_web_pois,水窪100山,50,NPO法人 山に生きる会HP『水窪100山』,https://yamaniikiru.com/100yama-hyo.htm
+47,BOOK,stg_book_web_pois,岡山の山百選,50,岡山県勤労者山岳連盟 踏査ほか『新ルート岡山の山百選』（2013）,http://id.ndl.go.jp/bib/000004041120
