@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import re
 import sys
 from argparse import ArgumentParser
 
-from shared import config, db_util
+from shared import config, db_util, tile_utils
 
 # コマンドライン引数の解析
 parser = ArgumentParser(description="GSI GCPを統合POIにリンク")
@@ -30,11 +29,11 @@ table_name = args.table_name
 radius = args.radius
 truncate = args.truncate
 
-# 地点等級（point_grade）と最小表示Zレベル（z_min）のマッピング
+# 地点等級（grade）と最小表示Zレベル（z_min）のマッピング
 z_min_mapping = [
-    7,   # 0:電子基準点
-    7,   # 1:一等三角点
-    9,   # 2:二等三角点
+    7,  # 0:電子基準点
+    7,  # 1:一等三角点
+    9,  # 2:二等三角点
     10,  # 3:三等三角点
     11,  # 4:四等三角点
     12,  # 5:標高点
@@ -91,7 +90,7 @@ try:
         # バッファ内で最も標高の高いPOIを取得
         cursor.execute(
             f"""
-            SELECT source_uuid
+            SELECT source_uuid, lat, lon
             FROM `{table_name}`
             WHERE ST_Within(geom, @buffer)
             ORDER BY elevation DESC
@@ -99,42 +98,66 @@ try:
             """,
         )
         result = cursor.fetchone()
-        if not result:
-            print(
-                f"No GCP POI found within {radius}m for mountain_id {id}",
-                file=sys.stderr,
+        if result is None:
+            cursor.execute("SELECT lat, lon FROM mountain_pois WHERE id = %s", (id,))
+            result = cursor.fetchone()
+            lat = result["lat"]
+            lon = result["lon"]
+            tile_x_z13, tile_y_z13, local_x_z13, local_y_z13 = (
+                tile_utils.lonlat_to_tile_coords(float(lat), float(lon), 13)
             )
-            point_grade = 7  # デフォルトの地点等級を等高線に設定
-            z_min = z_min_mapping[point_grade]
+            local_x_z13 = int(local_x_z13 * 64)
+            local_y_z13 = int(local_y_z13 * 64)
+            grade = 7
+            z_min = z_min_mapping[grade]
             cursor.execute(
-                """
+                f"""
                 UPDATE mountain_pois
-                SET
-                    point_grade = %s,
+                SET 
+                    tile_x_z13 = %s,
+                    tile_y_z13 = %s,
+                    local_x_z13 = %s,
+                    local_y_z13 = %s,
+                    grade = %s,
                     z_min = %s
                 WHERE id = %s
                 """,
-                (point_grade, z_min, id),
+                (
+                    tile_x_z13,
+                    tile_y_z13,
+                    local_x_z13,
+                    local_y_z13,
+                    grade,
+                    z_min,
+                    id,
+                ),
             )
             continue
 
         source_uuid = result["source_uuid"]
+        lat = result["lat"]
+        lon = result["lon"]
+        tile_x_z13, tile_y_z13, local_x_z13, local_y_z13 = (
+            tile_utils.lonlat_to_tile_coords(float(lat), float(lon), 13)
+        )
+        local_x_z13 = int(local_x_z13 * 64)
+        local_y_z13 = int(local_y_z13 * 64)
 
         # バッファ内で最優先の地点等級を取得
         cursor.execute(
             f"""
-            SELECT point_grade
+            SELECT grade
             FROM `{table_name}`
             WHERE ST_Within(geom, @buffer)
-            ORDER BY point_grade ASC
+            ORDER BY grade ASC
             LIMIT 1
             """,
         )
         result = cursor.fetchone()  # 少なくとも１つはある。
-        point_grade = int(result["point_grade"])
-        z_min = z_min_mapping[point_grade]
+        grade = int(result["grade"])
+        z_min = z_min_mapping[grade]
 
-        # 山岳統合POIの地理座標、標高、最小表示Zレベルを更新
+        # 山岳統合POIの地理座標、標高、最小表示Zレベル、地点等級、タイル座標、相対座標を更新
         cursor.execute(
             f"""
             UPDATE mountain_pois AS target
@@ -142,11 +165,24 @@ try:
             SET 
                 target.geom = source.geom,
                 target.elevation = source.elevation,
-                target.point_grade = %s,
+                target.tile_x_z13 = %s,
+                target.tile_y_z13 = %s,
+                target.local_x_z13 = %s,
+                target.local_y_z13 = %s,
+                target.grade = %s,
                 target.z_min = %s
             WHERE target.id = %s
             """,
-            (source_uuid, point_grade, z_min, id),
+            (
+                source_uuid,
+                tile_x_z13,
+                tile_y_z13,
+                local_x_z13,
+                local_y_z13,
+                grade,
+                z_min,
+                id,
+            ),
         )
 
         # 統合POIと情報源を関連付ける

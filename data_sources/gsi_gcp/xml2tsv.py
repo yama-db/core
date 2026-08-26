@@ -19,8 +19,8 @@ header = [
     "lat",
     "lon",
     "elevation",
-    "point_grade",
     "last_updated_at",
+    "grade",
 ]
 
 point_grade_mapping = {
@@ -63,10 +63,10 @@ for f in sys.argv[1:]:
             else:
                 print(f"Warning: unknown type '{t}' is skipped", file=sys.stderr)
                 continue
+            grade = point_grade_mapping.get(raw_type, 7)  # デフォルトは7（等高線）
             names_json = {"name": name, "kana": ""}
             raw_id = pt.find("fid", namespaces).text
             lat, lon = pt.find("pos/gml:Point/gml:pos", namespaces).text.split()
-            point_grade = point_grade_mapping[raw_type]
             elevation = getattr(pt.find("alti", namespaces), "text", "")
             if elevation is None or elevation == "":
                 print(
@@ -74,7 +74,7 @@ for f in sys.argv[1:]:
                     file=sys.stderr,
                 )
                 continue
-            last_update_at = pt.find("devDate/gml:timePosition", namespaces).text
+            last_updated_at = pt.find("devDate/gml:timePosition", namespaces).text
             output_row = [
                 raw_id,
                 raw_type,
@@ -82,8 +82,8 @@ for f in sys.argv[1:]:
                 lat,
                 lon,
                 elevation,
-                point_grade,
-                last_update_at,
+                last_updated_at,
+                grade,
             ]
             print("\t".join(map(str, output_row)))
 
