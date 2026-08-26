@@ -8,7 +8,6 @@ import sys
 from argparse import ArgumentParser
 
 import regex
-
 from convert_pua import convert_pua
 
 # コマンドライン引数の解析

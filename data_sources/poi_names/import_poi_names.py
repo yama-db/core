@@ -49,17 +49,17 @@ try:
     else:
         source_id_subquery = f"(SELECT id AS source_id FROM information_sources WHERE source_table = '{table_name}' LIMIT 1)"
 
-    cursor.execute(
-        """
+    cursor.execute("""
         SELECT src_char, dst_char
         FROM char_trans_map
         WHERE hit_count > 0
         ORDER BY hit_count DESC
-        """
-    )
+        """)
     rows = cursor.fetchall()
     print(f"Loaded {len(rows)} character mappings from char_trans_map.")
-    normalization_table = str.maketrans({row['src_char']: row['dst_char'] for row in rows})
+    normalization_table = str.maketrans(
+        {row["src_char"]: row["dst_char"] for row in rows}
+    )
 
     cursor.execute(
         f"""
@@ -89,9 +89,7 @@ try:
     )
     values = []
     for row in cursor.fetchall():
-        row["poi_name_normalized"] = row["poi_name"].translate(
-            normalization_table
-        )
+        row["poi_name_normalized"] = row["poi_name"].translate(normalization_table)
         values.append(tuple(row.values()))
 
     cursor.executemany(

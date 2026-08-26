@@ -14,7 +14,7 @@ try:
     conn, cursor = db_util.db_open()
 
     cursor.execute("SELECT src_char FROM char_trans_map")
-    src_chars = {row['src_char'] for row in cursor.fetchall()}
+    src_chars = {row["src_char"] for row in cursor.fetchall()}
 
     cursor.execute("SELECT poi_name, COUNT(*) AS cnt FROM poi_names GROUP BY poi_name")
     poi_data = cursor.fetchall()
@@ -23,18 +23,15 @@ try:
     samples = defaultdict(list)
 
     for row in poi_data:
-        name = row['poi_name']
-        cnt = row['cnt']
+        name = row["poi_name"]
+        cnt = row["cnt"]
         matched_chars = set(name) & src_chars
         for c in matched_chars:
             counts[c] += cnt
             if len(samples[c]) < 20:  # 上位20件を保持
                 samples[c].append(name)
 
-    update_data = [
-        (counts[c], ",".join(samples[c]), c)
-        for c in src_chars
-    ]
+    update_data = [(counts[c], ",".join(samples[c]), c) for c in src_chars]
     cursor.executemany(
         """
         UPDATE char_trans_map

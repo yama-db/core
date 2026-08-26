@@ -39,11 +39,7 @@ try:
 
     z_min_list = [13, 13, 12, 11, 10, 9, 8, 8]
 
-    TYPE_MAP = {
-        0: 'AREA',
-        1: 'MAIN',
-        2: 'ALIAS'
-    }
+    TYPE_MAP = {0: "AREA", 1: "MAIN", 2: "ALIAS"}
 
     cursor.execute(
         """
@@ -73,8 +69,8 @@ try:
         names_json = json.loads(row["names_json"])
         for item in names_json:
             current_type = item.get("type")
-            item["type"] = TYPE_MAP.get(current_type, 'UNKNOWN')
-        names_json.sort(key=lambda item: item["type"] != 'MAIN')
+            item["type"] = TYPE_MAP.get(current_type, "UNKNOWN")
+        names_json.sort(key=lambda item: item["type"] != "MAIN")
 
         row = [
             str(row["raw_id"]),

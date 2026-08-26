@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import csv
-import sys
 import random
+import sys
 import time
 import urllib.parse
 from argparse import ArgumentParser
@@ -61,7 +61,10 @@ for i in range(0, len(titles), CHUNK_SIZE):
         pageprops = page.get("pageprops", {})
         item = pageprops.get("wikibase_item")
         if not item:
-            print(f"Warning: No wikibase_item found for page {page.get('title')}", file=sys.stderr)
+            print(
+                f"Warning: No wikibase_item found for page {page.get('title')}",
+                file=sys.stderr,
+            )
             continue
         extract = page.get("extract", "")
         revisions = page.get("revisions", [])

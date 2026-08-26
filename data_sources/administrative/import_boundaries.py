@@ -51,10 +51,12 @@ try:
         geometry_type = geometry["type"]
         if geometry_type == "MultiPolygon":
             for coordinates in geometry["coordinates"]:
-                geometry_json = json.dumps({
-                    "type": "Polygon",
-                    "coordinates": coordinates,
-                })
+                geometry_json = json.dumps(
+                    {
+                        "type": "Polygon",
+                        "coordinates": coordinates,
+                    }
+                )
                 values.append((jis_code, geometry_json))
                 count += 1
         elif geometry_type == "Polygon":

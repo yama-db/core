@@ -44,7 +44,9 @@ with open(geojson_file, "r", encoding="utf-8-sig") as f:
     geojson = json.load(f)
     for feature in geojson["features"]:
         properties = feature["properties"]
-        name_str = regex.sub(r"(\p{Han})ケ(\p{Han})", r"\1ヶ\2", properties["山名＜山頂名＞"])
+        name_str = regex.sub(
+            r"(\p{Han})ケ(\p{Han})", r"\1ヶ\2", properties["山名＜山頂名＞"]
+        )
         if name_str.endswith(("の頂", "の山腹")):
             continue
         kana_str = properties["山名よみ＜山頂名よみ＞"]

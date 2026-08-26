@@ -24,7 +24,7 @@ parser.add_argument(
         "stg_yamareco_pois",
         "stg_legacy_pois",
     ],
-    help="登録先のテーブル名"
+    help="登録先のテーブル名",
 )
 parser.add_argument("tsv_file", help="POIのTSVファイル・パス")
 parser.add_argument(

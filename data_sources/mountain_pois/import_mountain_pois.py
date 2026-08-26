@@ -5,7 +5,7 @@ import csv
 import sys
 from argparse import ArgumentParser
 
-from shared import tile_utils, db_util
+from shared import db_util
 
 parser = ArgumentParser(description="統一POIテーブルを初期化")
 parser.add_argument("table_name", choices=["mountain_pois"], help="統一POIテーブル名")
@@ -41,9 +41,7 @@ try:
             lat = row["lat"]
             lon = row["lon"]
             alt = row["alt"]
-            values.append(
-                (is_used, name, kana, f"POINT({lon} {lat})", alt)
-            )
+            values.append((is_used, name, kana, f"POINT({lon} {lat})", alt))
 
     cursor.executemany(
         f"""
