@@ -19,7 +19,7 @@ work/.extracted:
 import: dist/gsi_gcp.tsv import_gcp.py
 	python3 import_gcp.py --truncate $(TABLE_NAME) $<
 
-unify: unify_gcp.py
+unify:
 	python3 unify_gcp.py --truncate $(TABLE_NAME)
 
 clean:

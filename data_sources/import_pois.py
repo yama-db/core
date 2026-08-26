@@ -15,6 +15,7 @@ parser = ArgumentParser(description="POIのTSVファイルをDBに登録")
 parser.add_argument(
     "table_name",
     choices=[
+        "stg_gsi_gcp_pois",
         "stg_gsi_1003_pois",
         "stg_gsi_dm25k_pois",
         "stg_gsi_vtexp_pois",
@@ -42,13 +43,20 @@ table_name = args.table_name
 max_count = args.max_count
 truncate = args.truncate
 
+if table_name == "stg_gsi_gcp_pois":
+    grade_column = ", grade"
+    grade_value = ", %s"
+else:
+    grade_column = ""
+    grade_value = ""
+
 query_insert = f"""
     INSERT INTO `{table_name}` (
         source_uuid, raw_id, raw_type, names_json,
-        geom, elevation, last_updated_at
+        geom, elevation, last_updated_at{grade_column}
     ) VALUES (
         %s, %s, %s, %s,
-        ST_GeomFromText(%s, 4326, "axis-order=long-lat"), %s, %s
+        ST_GeomFromText(%s, 4326, "axis-order=long-lat"), %s, %s{grade_value}
     )
     ON DUPLICATE KEY UPDATE
         names_json = JSON_MERGE_PRESERVE(names_json, VALUES(names_json))
@@ -83,17 +91,18 @@ try:
                 coord = f"POINT({lon} {lat})"
             else:
                 coord = None
-            values.append(
-                (
-                    uuid.bytes,
-                    raw_id,
-                    row["raw_type"],
-                    row["names_json"],
-                    coord,
-                    row["elevation"] or None,
-                    row["last_updated_at"] or None,
-                )
+            value = (
+                uuid.bytes,
+                raw_id,
+                row["raw_type"],
+                row["names_json"],
+                coord,
+                row["elevation"] or None,
+                row["last_updated_at"] or None,
             )
+            if table_name == "stg_gsi_gcp_pois":
+                value += (row["grade"] or None,)
+            values.append(value)
             count += 1
             if count % max_count == 0:
                 cursor.executemany(query_insert, values)

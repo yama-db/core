@@ -13,11 +13,7 @@ from shared import db_util, generate_source_uuid, tile_utils
 # コマンドライン引数の解析
 parser = ArgumentParser(description="POIのTSVファイルをDBに登録")
 parser.add_argument(
-    "table_name",
-    choices=[
-        "stg_gsi_gcp_pois",
-    ],
-    help="登録先のテーブル名"
+    "table_name", choices=["stg_gsi_gcp_pois"], help="登録先のテーブル名"
 )
 parser.add_argument("tsv_file", help="POIのTSVファイル・パス")
 parser.add_argument(
@@ -39,7 +35,7 @@ truncate = args.truncate
 query_insert = f"""
     INSERT INTO `{table_name}` (
         source_uuid, raw_id, raw_type, names_json,
-        geom, elevation, last_updated_at, point_grade
+        geom, elevation, last_updated_at, grade
     ) VALUES (
         %s, %s, %s, %s,
         ST_GeomFromText(%s, 4326, "axis-order=long-lat"), %s, %s, %s
@@ -77,18 +73,17 @@ try:
                 coord = f"POINT({lon} {lat})"
             else:
                 coord = None
-            values.append(
-                (
-                    uuid.bytes,
-                    raw_id,
-                    row["raw_type"],
-                    row["names_json"],
-                    coord,
-                    row["elevation"] or None,
-                    row["last_updated_at"] or None,
-                    row["point_grade"] or None,
-                )
+            value = (
+                uuid.bytes,
+                raw_id,
+                row["raw_type"],
+                row["names_json"],
+                coord,
+                row["elevation"] or None,
+                row["last_updated_at"] or None,
+                row["grade"] or None,
             )
+            values.append(value)
             count += 1
             if count % max_count == 0:
                 cursor.executemany(query_insert, values)
