@@ -63,6 +63,9 @@ CREATE TABLE _stg_template_pois (
 
 CREATE TABLE stg_gsi_gcp_pois LIKE _stg_template_pois;
 ALTER TABLE stg_gsi_gcp_pois COMMENT '基盤地図情報（基準点・標高点）';
+ALTER TABLE stg_gsi_gcp_pois
+ADD COLUMN grade TINYINT UNSIGNED NOT NULL
+COMMENT '地点種別（0:電子基準点,1〜4:三角点,5:標高点,6:その他,7:等高線）';
 
 CREATE TABLE stg_gsi_1003_pois LIKE _stg_template_pois;
 ALTER TABLE stg_gsi_1003_pois COMMENT '日本の主な山岳標高（1003山）';
@@ -111,6 +114,8 @@ CREATE TABLE mountain_pois (
     main_child_id INT COMMENT '代表子POI ID',
     main_name VARCHAR(255) COMMENT '代表名称',
     main_kana VARCHAR(255) COMMENT '代表よみがな',
+    grade TINYINT UNSIGNED NOT NULL DEFAULT 7
+    COMMENT '地点種別（0:電子基準点,1〜4:三角点,5:標高点,6:その他,7:等高線）',
     geom POINT /*!80003 SRID 4326 */ NOT NULL COMMENT '地理座標',
     lat DECIMAL(9, 6) GENERATED ALWAYS AS (
         st_latitude(geom)
@@ -121,7 +126,7 @@ CREATE TABLE mountain_pois (
     elevation DECIMAL(7, 2) NOT NULL COMMENT '標高',
     tile_x_z13 MEDIUMINT UNSIGNED COMMENT 'タイルX座標',
     tile_y_z13 MEDIUMINT UNSIGNED COMMENT 'タイルY座標',
-    z_min INT COMMENT '最小表示Zレベル',
+    z_min TINYINT UNSIGNED COMMENT '最小表示Zレベル',
     local_x_z13 MEDIUMINT UNSIGNED COMMENT 'タイル内相対X座標*64',
     local_y_z13 MEDIUMINT UNSIGNED COMMENT 'タイル内相対Y座標*64',
     last_updated_at DATETIME COMMENT '更新日時',
@@ -141,6 +146,7 @@ CREATE TABLE poi_hierarchies (
         'AREA_TO_PEAK',
         'MAIN_TO_SUB_PEAK'
     ) NOT NULL COMMENT '関係種別',
+    is_representative BOOLEAN NOT NULL DEFAULT FALSE COMMENT '代表子POIフラグ',
     PRIMARY KEY (parent_id, child_id),
     FOREIGN KEY (parent_id) REFERENCES mountain_pois (id)
     ON DELETE CASCADE ON UPDATE CASCADE,

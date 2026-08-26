@@ -37,7 +37,15 @@ try:
     )
 
     pois = [
-        {"id": i, "is_used": 0, "name": "", "kana": "", "lat": 0.0, "lon": 0.0, "alt": 0.0}
+        {
+            "id": i,
+            "is_used": 0,
+            "name": "",
+            "kana": "",
+            "lat": 0.0,
+            "lon": 0.0,
+            "alt": 0.0,
+        }
         for i in range(1, max_id + 1)
     ]
 
@@ -56,7 +64,8 @@ try:
 
     # 山域名と山頂名を親と子の関係で取得
     with open(parent_pois_csv, "r", encoding="utf-8") as f:
-        reader = csv.DictReader(f)  # group_id,parent_name,parent_kana,child_id,child_name,relation_type
+        reader = csv.DictReader(f)
+        # group_id,parent_name,parent_kana,child_id,child_name,relation_type,is_representative
         relations = list(reader)
 
     # 異なる group_id の数を数える
@@ -76,12 +85,13 @@ try:
     )
     unuseds = cursor.fetchall()
 
-    fieldnames=[
+    fieldnames = [
         "parent_id",
         "parent_name",
         "child_id",
         "child_name",
         "relation_type",
+        "is_representative",
     ]
 
     with open(poi_hierarchies_csv, "w", encoding="utf-8") as f:
@@ -118,6 +128,7 @@ try:
                     "child_id": child_id,
                     "child_name": relation["child_name"],
                     "relation_type": relation["relation_type"],
+                    "is_representative": relation["is_representative"],
                 }
             )
 
