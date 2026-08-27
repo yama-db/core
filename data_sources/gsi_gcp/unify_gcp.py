@@ -29,18 +29,6 @@ table_name = args.table_name
 radius = args.radius
 truncate = args.truncate
 
-# 地点等級（grade）と最小表示Zレベル（z_min）のマッピング
-z_min_mapping = [
-    7,  # 0:電子基準点
-    7,  # 1:一等三角点
-    9,  # 2:二等三角点
-    10,  # 3:三等三角点
-    11,  # 4:四等三角点
-    12,  # 5:標高点
-    13,  # 6:その他
-    13,  # 7:等高線
-]
-
 # MySQL接続の確立
 conn = None
 cursor = None
@@ -109,7 +97,7 @@ try:
             local_x_z13 = int(local_x_z13 * 64)
             local_y_z13 = int(local_y_z13 * 64)
             grade = 7
-            z_min = z_min_mapping[grade]
+            z_min = config.z_min_mapping[grade]
             cursor.execute(
                 f"""
                 UPDATE mountain_pois
@@ -155,7 +143,7 @@ try:
         )
         result = cursor.fetchone()  # 少なくとも１つはある。
         grade = int(result["grade"])
-        z_min = z_min_mapping[grade]
+        z_min = config.z_min_mapping[grade]
 
         # 山岳統合POIの地理座標、標高、最小表示Zレベル、地点等級、タイル座標、相対座標を更新
         cursor.execute(
