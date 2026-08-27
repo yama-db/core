@@ -3,7 +3,7 @@
 
 import sys
 
-from shared import db_util
+from shared import config, db_util
 
 # MySQL接続の確立
 conn = None
@@ -50,6 +50,33 @@ try:
         SET pn.is_preferred = IF(rs.rn = 1, 1, 0)
         """,
     )
+
+    # 代表子POIについて、最小表示Zレベルを再設定
+    cursor.execute(
+        """
+        SELECT
+            m.id,
+            m.grade
+        FROM mountain_pois AS m
+        JOIN poi_hierarchies AS h
+            ON m.id = h.child_id
+            AND h.is_representative
+            AND m.is_used
+        """,
+    )
+    rows = cursor.fetchall()
+    params = []
+    for row in rows:
+        grade = row["grade"]
+        z_min = config.z_min_mapping[grade]
+        z_min = min(z_min, 11)
+        params.append((z_min, row["id"]))
+    if params:
+        cursor.executemany(
+            "UPDATE mountain_pois SET z_min = %s WHERE id = %s",
+            params,
+        )
+
     success = True
 
 except Exception as err:
