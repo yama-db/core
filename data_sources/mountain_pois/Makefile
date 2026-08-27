@@ -17,6 +17,7 @@ dist/mountain_pois.csv: gen_mountain_pois.py raw/parent_pois.csv | dist
 import: dist/mountain_pois.csv import_mountain_pois.py
 	python3 import_mountain_pois.py --truncate mountain_pois $<
 	python3 ../import_csv.py --truncate poi_hierarchies $(AUX_FILE)
+	./set_main_child_id.sh
 
 unify: ;
 
